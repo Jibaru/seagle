@@ -8,7 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
 interface DatabaseConnectionFormProps {
-	onConnectionChange: (connected: boolean) => void;
+	onConnectionChange: (connected: boolean, databases?: string[]) => void;
 }
 
 interface DatabaseConfig {
@@ -72,7 +72,7 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 			const result = await Connect(config);
 
 			setConnected(true);
-			onConnectionChange(true);
+			onConnectionChange(true, result?.databases || []);
 			setError(null);
 
 			// Log the databases received from the connection
