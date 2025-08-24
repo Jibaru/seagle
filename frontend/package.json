@@ -7,7 +7,10 @@
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
-		"lint": "biome check --write --unsafe --config-path=biome.json"
+		"check": "biome check --write --unsafe --config-path=biome.json",
+		"lint": "biome lint --fix --unsafe --config-path=biome.json",
+		"format": "biome format --write --config-path=biome.json",
+		"biome": "npm run check && npm run lint && npm run format"
 	},
 	"dependencies": {
 		"@radix-ui/react-label": "^2.1.7",
