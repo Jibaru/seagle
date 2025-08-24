@@ -28,3 +28,11 @@ type TableColumn struct {
 	IsNullable   bool   `json:"isNullable"`
 	DefaultValue string `json:"defaultValue,omitempty"`
 }
+
+// QueryResult represents the result of a SQL query
+type QueryResult struct {
+	Columns []string        `json:"columns"`
+	Rows    [][]interface{} `json:"rows"`
+	RowsAffected int64      `json:"rowsAffected"`
+	Duration     int64      `json:"duration"` // in milliseconds
+}

@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -248,4 +249,101 @@ func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]
 	}
 
 	return columns, nil
+}
+
+// ExecuteQuery executes a SQL query against a specific database and returns the results
+func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.QueryResult, error) {
+	if cs.connection == nil || cs.connection.DB == nil {
+		return nil, fmt.Errorf("no active database connection")
+	}
+
+	// Connect to the specific database
+	config := cs.connection.Config
+	config.Database = databaseName
+	
+	connStr, err := cs.buildConnectionString(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build connection string: %w", err)
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
+	}
+
+	start := time.Now()
+
+	// Check if it's a SELECT query or DML/DDL
+	rows, err := db.Query(query)
+	if err != nil {
+		// If Query fails, try Exec for DML/DDL statements
+		result, execErr := db.Exec(query)
+		if execErr != nil {
+			return nil, fmt.Errorf("failed to execute query: %w", execErr)
+		}
+		
+		rowsAffected, _ := result.RowsAffected()
+		duration := time.Since(start).Milliseconds()
+		
+		return &types.QueryResult{
+			Columns:      []string{},
+			Rows:         [][]interface{}{},
+			RowsAffected: rowsAffected,
+			Duration:     duration,
+		}, nil
+	}
+	defer rows.Close()
+
+	// Get column information
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get columns: %w", err)
+	}
+
+	// Prepare result structure
+	var resultRows [][]interface{}
+	
+	for rows.Next() {
+		// Create a slice of interface{} to hold the values
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		
+		for i := range values {
+			valuePtrs[i] = &values[i]
+		}
+		
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		
+		// Convert []byte to string for display
+		row := make([]interface{}, len(values))
+		for i, val := range values {
+			if b, ok := val.([]byte); ok {
+				row[i] = string(b)
+			} else {
+				row[i] = val
+			}
+		}
+		
+		resultRows = append(resultRows, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	duration := time.Since(start).Milliseconds()
+
+	return &types.QueryResult{
+		Columns:      columns,
+		Rows:         resultRows,
+		RowsAffected: int64(len(resultRows)),
+		Duration:     duration,
+	}, nil
 }

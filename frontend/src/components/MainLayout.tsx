@@ -1,5 +1,6 @@
 import type React from "react";
 import { useDatabaseStore } from "../store/DatabaseStore";
+import { QueryInterface } from "./QueryInterface";
 import { Sidebar } from "./Sidebar";
 import { Button } from "./ui/button";
 
@@ -11,11 +12,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onNewConnection }) => {
 	const { state, selectDatabase, selectTable } = useDatabaseStore();
 
 	return (
-		<div className="flex h-screen bg-gray-50">
+		<div className="flex h-screen overflow-hidden bg-gray-50">
 			<Sidebar />
 
-			<div className="flex flex-1 flex-col">
-				<header className="border-gray-200 border-b bg-white px-6 py-4">
+			<div className="flex flex-1 flex-col overflow-hidden">
+				<header className="flex-shrink-0 border-gray-200 border-b bg-white px-6 py-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center space-x-4">
 							<h1 className="font-semibold text-gray-800 text-xl">
@@ -36,30 +37,28 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onNewConnection }) => {
 					</div>
 				</header>
 
-				<main className="flex-1 p-6">
+				<main className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
 					{state.selectedTable ? (
-						<div className="rounded-lg border border-gray-200 bg-white p-6">
-							<h2 className="mb-4 font-medium text-gray-800 text-lg">
-								Table: {state.selectedTable}
-							</h2>
-							<div className="text-gray-500">
-								Table structure and data view will be implemented here for{" "}
-								{state.selectedDatabase}.{state.selectedTable}
+						<div className="flex flex-1 flex-col">
+							<div className="border-gray-200 border-b bg-white p-4">
+								<h2 className="font-medium text-gray-800 text-lg">
+									Table: {state.selectedDatabase}.{state.selectedTable}
+								</h2>
+								<div className="mt-1 text-gray-500 text-sm">
+									Table structure and data view - Coming soon
+								</div>
+							</div>
+							<div className="flex-1 p-6">
+								<div className="h-full rounded-lg border border-gray-200 bg-white p-6">
+									<div className="text-gray-500">
+										Table structure and data view will be implemented here for{" "}
+										{state.selectedDatabase}.{state.selectedTable}
+									</div>
+								</div>
 							</div>
 						</div>
 					) : state.selectedDatabase ? (
-						<div className="rounded-lg border border-gray-200 bg-white p-6">
-							<h2 className="mb-4 font-medium text-gray-800 text-lg">
-								Query Editor - {state.selectedDatabase}
-							</h2>
-							<div className="text-gray-500">
-								SQL query editor will be implemented here for database:{" "}
-								{state.selectedDatabase}
-								<br />
-								<br />
-								Select a table from the sidebar to view its structure.
-							</div>
-						</div>
+						<QueryInterface database={state.selectedDatabase} />
 					) : (
 						<div className="flex h-full items-center justify-center">
 							<div className="text-center text-gray-500">

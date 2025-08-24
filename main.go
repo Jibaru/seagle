@@ -24,6 +24,7 @@ func main() {
 	disconnectHnd := handlers.NewDisconnectHandler(connectionService)
 	getTablesHnd := handlers.NewGetTablesHandler(connectionService)
 	getTableColumnsHnd := handlers.NewGetTableColumnsHandler(connectionService)
+	executeQueryHnd := handlers.NewExecuteQueryHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -42,6 +43,7 @@ func main() {
 			disconnectHnd,
 			getTablesHnd,
 			getTableColumnsHnd,
+			executeQueryHnd,
 		},
 	})
 

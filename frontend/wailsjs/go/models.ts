@@ -42,6 +42,54 @@ export namespace handlers {
 	        this.databases = source["databases"];
 	    }
 	}
+	export class ExecuteQueryInput {
+	    database: string;
+	    query: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExecuteQueryInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.database = source["database"];
+	        this.query = source["query"];
+	    }
+	}
+	export class ExecuteQueryOutput {
+	    success: boolean;
+	    message?: string;
+	    result?: types.QueryResult;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExecuteQueryOutput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.result = this.convertValues(source["result"], types.QueryResult);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class GetTableColumnsInput {
 	    database: string;
 	    table: string;
@@ -59,7 +107,7 @@ export namespace handlers {
 	export class GetTableColumnsOutput {
 	    success: boolean;
 	    message?: string;
-	    columns?: services.TableColumn[];
+	    columns?: types.TableColumn[];
 	
 	    static createFrom(source: any = {}) {
 	        return new GetTableColumnsOutput(source);
@@ -69,7 +117,7 @@ export namespace handlers {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
 	        this.message = source["message"];
-	        this.columns = this.convertValues(source["columns"], services.TableColumn);
+	        this.columns = this.convertValues(source["columns"], types.TableColumn);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -147,8 +195,26 @@ export namespace handlers {
 
 }
 
-export namespace services {
+export namespace types {
 	
+	export class QueryResult {
+	    columns: string[];
+	    rows: any[][];
+	    rowsAffected: number;
+	    duration: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new QueryResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.rowsAffected = source["rowsAffected"];
+	        this.duration = source["duration"];
+	    }
+	}
 	export class TableColumn {
 	    name: string;
 	    dataType: string;
