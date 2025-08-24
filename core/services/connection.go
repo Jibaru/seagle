@@ -135,3 +135,58 @@ func (cs *ConnectionService) GetDatabases() ([]string, error) {
 
 	return databases, nil
 }
+
+// GetTables returns a list of tables for a specific database
+func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
+	if cs.connection == nil || cs.connection.DB == nil {
+		return nil, fmt.Errorf("no active database connection")
+	}
+
+	// First, connect to the specific database
+	config := cs.connection.Config
+	config.Database = databaseName
+	
+	connStr, err := cs.buildConnectionString(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build connection string: %w", err)
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
+	}
+
+	query := `
+		SELECT table_name 
+		FROM information_schema.tables 
+		WHERE table_schema = 'public' 
+		AND table_type = 'BASE TABLE'
+		ORDER BY table_name
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables for database %s: %w", databaseName, err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return nil, fmt.Errorf("failed to scan table name: %w", err)
+		}
+		tables = append(tables, tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating table results: %w", err)
+	}
+
+	return tables, nil
+}

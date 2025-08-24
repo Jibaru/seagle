@@ -3,14 +3,15 @@ import { DatabaseConnectionForm } from "./components/DatabaseConnectionForm";
 import { MainLayout } from "./components/MainLayout";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { Button } from "./components/ui/button";
+import { DatabaseProvider, useDatabaseStore } from "./store/DatabaseStore";
 import "./App.css";
 
-function App() {
+function AppContent() {
 	const [currentScreen, setCurrentScreen] = useState<
 		"welcome" | "connection" | "connected"
 	>("welcome");
 	const [isConnected, setIsConnected] = useState(false);
-	const [databases, setDatabases] = useState<string[]>([]);
+	const { setDatabases, resetState } = useDatabaseStore();
 
 	const handleNewConnection = () => {
 		setCurrentScreen("connection");
@@ -27,14 +28,14 @@ function App() {
 				setDatabases(databaseList);
 			}
 		} else {
-			setDatabases([]);
+			resetState();
 		}
 	};
 
 	const handleBackToWelcome = () => {
 		setCurrentScreen("welcome");
 		setIsConnected(false);
-		setDatabases([]);
+		resetState();
 	};
 
 	if (currentScreen === "welcome") {
@@ -61,12 +62,18 @@ function App() {
 	}
 
 	if (currentScreen === "connected") {
-		return (
-			<MainLayout databases={databases} onNewConnection={handleBackToWelcome} />
-		);
+		return <MainLayout onNewConnection={handleBackToWelcome} />;
 	}
 
 	return null;
+}
+
+function App() {
+	return (
+		<DatabaseProvider>
+			<AppContent />
+		</DatabaseProvider>
+	);
 }
 
 export default App;

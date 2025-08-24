@@ -22,6 +22,7 @@ func main() {
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)
 	disconnectHnd := handlers.NewDisconnectHandler(connectionService)
+	getTablesHnd := handlers.NewGetTablesHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -38,6 +39,7 @@ func main() {
 			connectHnd,
 			testConnHnd,
 			disconnectHnd,
+			getTablesHnd,
 		},
 	})
 

@@ -42,6 +42,34 @@ export namespace handlers {
 	        this.databases = source["databases"];
 	    }
 	}
+	export class GetTablesInput {
+	    database: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GetTablesInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.database = source["database"];
+	    }
+	}
+	export class GetTablesOutput {
+	    success: boolean;
+	    message?: string;
+	    tables?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new GetTablesOutput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.tables = source["tables"];
+	    }
+	}
 	export class TestConnectionInput {
 	    host: string;
 	    port: number;
