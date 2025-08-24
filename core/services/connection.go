@@ -190,3 +190,62 @@ func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
 
 	return tables, nil
 }
+
+// GetTableColumns returns the columns for a specific table in a database
+func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]types.TableColumn, error) {
+	if cs.connection == nil || cs.connection.DB == nil {
+		return nil, fmt.Errorf("no active database connection")
+	}
+
+	// Connect to the specific database
+	config := cs.connection.Config
+	config.Database = databaseName
+	
+	connStr, err := cs.buildConnectionString(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build connection string: %w", err)
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
+	}
+
+	query := `
+		SELECT 
+			column_name,
+			data_type,
+			is_nullable = 'YES' as is_nullable,
+			COALESCE(column_default, '') as column_default
+		FROM information_schema.columns 
+		WHERE table_schema = 'public' 
+		AND table_name = $1
+		ORDER BY ordinal_position
+	`
+
+	rows, err := db.Query(query, tableName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query columns for table %s.%s: %w", databaseName, tableName, err)
+	}
+	defer rows.Close()
+
+	var columns []types.TableColumn
+	for rows.Next() {
+		var col types.TableColumn
+		if err := rows.Scan(&col.Name, &col.DataType, &col.IsNullable, &col.DefaultValue); err != nil {
+			return nil, fmt.Errorf("failed to scan column: %w", err)
+		}
+		columns = append(columns, col)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating column results: %w", err)
+	}
+
+	return columns, nil
+}

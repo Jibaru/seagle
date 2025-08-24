@@ -1,14 +1,25 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useReducer } from "react";
+import { GetTableColumns } from "../../wailsjs/go/handlers/GetTableColumnsHandler";
 import { GetTables } from "../../wailsjs/go/handlers/GetTablesHandler";
+
+interface TableColumn {
+	name: string;
+	dataType: string;
+	isNullable: boolean;
+	defaultValue?: string;
+}
 
 interface DatabaseState {
 	databases: string[];
 	selectedDatabase?: string;
 	selectedTable?: string;
 	databaseTables: Record<string, string[]>;
+	tableColumns: Record<string, TableColumn[]>; // key: "database.table"
 	loadingTables: Set<string>;
+	loadingColumns: Set<string>; // key: "database.table"
 	expandedDatabases: Set<string>;
+	expandedTables: Set<string>; // key: "database.table"
 }
 
 type DatabaseAction =
@@ -16,13 +27,22 @@ type DatabaseAction =
 	| { type: "SELECT_DATABASE"; payload: string }
 	| { type: "SELECT_TABLE"; payload: { database: string; table: string } }
 	| { type: "TOGGLE_DATABASE"; payload: string }
+	| { type: "TOGGLE_TABLE"; payload: { database: string; table: string } }
 	| {
 			type: "SET_LOADING_TABLES";
 			payload: { database: string; loading: boolean };
 	  }
 	| {
+			type: "SET_LOADING_COLUMNS";
+			payload: { database: string; table: string; loading: boolean };
+	  }
+	| {
 			type: "SET_DATABASE_TABLES";
 			payload: { database: string; tables: string[] };
+	  }
+	| {
+			type: "SET_TABLE_COLUMNS";
+			payload: { database: string; table: string; columns: TableColumn[] };
 	  }
 	| { type: "RESET_STATE" };
 
@@ -31,8 +51,11 @@ const initialState: DatabaseState = {
 	selectedDatabase: undefined,
 	selectedTable: undefined,
 	databaseTables: {},
+	tableColumns: {},
 	loadingTables: new Set(),
+	loadingColumns: new Set(),
 	expandedDatabases: new Set(),
+	expandedTables: new Set(),
 };
 
 function databaseReducer(
@@ -86,6 +109,34 @@ function databaseReducer(
 			};
 		}
 
+		case "TOGGLE_TABLE": {
+			const tableKey = `${action.payload.database}.${action.payload.table}`;
+			const newExpandedTables = new Set(state.expandedTables);
+			if (newExpandedTables.has(tableKey)) {
+				newExpandedTables.delete(tableKey);
+			} else {
+				newExpandedTables.add(tableKey);
+			}
+			return {
+				...state,
+				expandedTables: newExpandedTables,
+			};
+		}
+
+		case "SET_LOADING_COLUMNS": {
+			const tableKey = `${action.payload.database}.${action.payload.table}`;
+			const newLoadingColumns = new Set(state.loadingColumns);
+			if (action.payload.loading) {
+				newLoadingColumns.add(tableKey);
+			} else {
+				newLoadingColumns.delete(tableKey);
+			}
+			return {
+				...state,
+				loadingColumns: newLoadingColumns,
+			};
+		}
+
 		case "SET_DATABASE_TABLES":
 			return {
 				...state,
@@ -94,6 +145,17 @@ function databaseReducer(
 					[action.payload.database]: action.payload.tables,
 				},
 			};
+
+		case "SET_TABLE_COLUMNS": {
+			const tableKey = `${action.payload.database}.${action.payload.table}`;
+			return {
+				...state,
+				tableColumns: {
+					...state.tableColumns,
+					[tableKey]: action.payload.columns,
+				},
+			};
+		}
 
 		case "RESET_STATE":
 			return initialState;
@@ -109,6 +171,7 @@ interface DatabaseContextValue {
 	selectDatabase: (database: string) => void;
 	selectTable: (database: string, table: string) => void;
 	toggleDatabase: (database: string) => Promise<void>;
+	toggleTable: (database: string, table: string) => Promise<void>;
 	resetState: () => void;
 }
 
@@ -174,6 +237,48 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 		[state.expandedDatabases, state.databaseTables],
 	);
 
+	const toggleTable = useCallback(
+		async (database: string, table: string) => {
+			const tableKey = `${database}.${table}`;
+			dispatch({ type: "TOGGLE_TABLE", payload: { database, table } });
+
+			// If expanding and columns not loaded, fetch them
+			if (
+				!state.expandedTables.has(tableKey) &&
+				!state.tableColumns[tableKey]
+			) {
+				dispatch({
+					type: "SET_LOADING_COLUMNS",
+					payload: { database, table, loading: true },
+				});
+				try {
+					const result = await GetTableColumns({ database, table });
+					const columns =
+						result?.success && result?.columns ? result.columns : [];
+					dispatch({
+						type: "SET_TABLE_COLUMNS",
+						payload: { database, table, columns },
+					});
+				} catch (error) {
+					console.error(
+						`Failed to fetch columns for ${database}.${table}:`,
+						error,
+					);
+					dispatch({
+						type: "SET_TABLE_COLUMNS",
+						payload: { database, table, columns: [] },
+					});
+				} finally {
+					dispatch({
+						type: "SET_LOADING_COLUMNS",
+						payload: { database, table, loading: false },
+					});
+				}
+			}
+		},
+		[state.expandedTables, state.tableColumns],
+	);
+
 	const resetState = useCallback(() => {
 		dispatch({ type: "RESET_STATE" });
 	}, []);
@@ -184,6 +289,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 		selectDatabase,
 		selectTable,
 		toggleDatabase,
+		toggleTable,
 		resetState,
 	};
 

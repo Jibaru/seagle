@@ -1,6 +1,7 @@
 import {
 	ChevronDown,
 	ChevronRight,
+	Columns,
 	Database,
 	Loader2,
 	Table,
@@ -9,7 +10,7 @@ import type React from "react";
 import { useDatabaseStore } from "../store/DatabaseStore";
 
 export const Sidebar: React.FC = () => {
-	const { state, selectDatabase, selectTable, toggleDatabase } =
+	const { state, selectDatabase, selectTable, toggleDatabase, toggleTable } =
 		useDatabaseStore();
 
 	return (
@@ -64,22 +65,72 @@ export const Sidebar: React.FC = () => {
 												No tables found
 											</div>
 										) : (
-											state.databaseTables[database]?.map((table) => (
-												<button
-													key={table}
-													type="button"
-													onClick={() => selectTable(database, table)}
-													className={`flex w-full items-center rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
-														state.selectedDatabase === database &&
-														state.selectedTable === table
-															? "bg-green-100 text-green-700"
-															: "text-gray-600 hover:bg-gray-100"
-													}`}
-												>
-													<Table className="mr-2 h-3 w-3 flex-shrink-0" />
-													<span className="truncate">{table}</span>
-												</button>
-											))
+											state.databaseTables[database]?.map((table) => {
+												const tableKey = `${database}.${table}`;
+												return (
+													<div key={table} className="space-y-1">
+														<div className="flex items-center">
+															<button
+																type="button"
+																onClick={() => toggleTable(database, table)}
+																className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100"
+															>
+																{state.expandedTables.has(tableKey) ? (
+																	<ChevronDown className="h-3 w-3 text-gray-500" />
+																) : (
+																	<ChevronRight className="h-3 w-3 text-gray-500" />
+																)}
+															</button>
+															<button
+																type="button"
+																onClick={() => selectTable(database, table)}
+																className={`flex flex-1 items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+																	state.selectedDatabase === database &&
+																	state.selectedTable === table
+																		? "bg-green-100 text-green-700"
+																		: "text-gray-600 hover:bg-gray-100"
+																}`}
+															>
+																<Table className="mr-2 h-3 w-3 flex-shrink-0" />
+																<span className="truncate">{table}</span>
+															</button>
+														</div>
+
+														{state.expandedTables.has(tableKey) && (
+															<div className="ml-4 border-gray-300 border-l pl-2">
+																{state.loadingColumns.has(tableKey) ? (
+																	<div className="flex items-center px-3 py-1 text-gray-500 text-xs">
+																		<Loader2 className="mr-2 h-2 w-2 animate-spin" />
+																		Loading columns...
+																	</div>
+																) : state.tableColumns[tableKey]?.length ===
+																	0 ? (
+																	<div className="px-3 py-1 text-gray-500 text-xs">
+																		No columns found
+																	</div>
+																) : (
+																	state.tableColumns[tableKey]?.map(
+																		(column) => (
+																			<div
+																				key={column.name}
+																				className="flex items-center px-3 py-1 text-gray-600 text-xs"
+																			>
+																				<Columns className="mr-2 h-2 w-2 flex-shrink-0" />
+																				<span className="mr-1 truncate">
+																					{column.name}
+																				</span>
+																				<span className="text-gray-400 text-xs">
+																					({column.dataType})
+																				</span>
+																			</div>
+																		),
+																	)
+																)}
+															</div>
+														)}
+													</div>
+												);
+											})
 										)}
 									</div>
 								)}

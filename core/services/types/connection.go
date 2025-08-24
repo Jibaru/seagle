@@ -20,3 +20,11 @@ type DatabaseConnection struct {
 	IsConnected bool           `json:"isConnected"`
 	DB          *sql.DB        `json:"-"`
 }
+
+// TableColumn represents a column in a database table
+type TableColumn struct {
+	Name         string `json:"name"`
+	DataType     string `json:"dataType"`
+	IsNullable   bool   `json:"isNullable"`
+	DefaultValue string `json:"defaultValue,omitempty"`
+}

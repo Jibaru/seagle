@@ -23,6 +23,7 @@ func main() {
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)
 	disconnectHnd := handlers.NewDisconnectHandler(connectionService)
 	getTablesHnd := handlers.NewGetTablesHandler(connectionService)
+	getTableColumnsHnd := handlers.NewGetTableColumnsHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -40,6 +41,7 @@ func main() {
 			testConnHnd,
 			disconnectHnd,
 			getTablesHnd,
+			getTableColumnsHnd,
 		},
 	})
 
