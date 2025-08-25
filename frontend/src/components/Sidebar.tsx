@@ -14,13 +14,13 @@ export const Sidebar: React.FC = () => {
 		useDatabaseStore();
 
 	return (
-		<div className="flex h-full w-64 flex-col border-gray-200 border-r bg-white shadow-sm">
-			<div className="flex-shrink-0 border-gray-200 border-b p-4">
-				<h2 className="font-semibold text-gray-800 text-lg">Databases</h2>
+		<div className="flex h-full w-64 flex-col border-gray-200 border-r bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+			<div className="flex-shrink-0 border-gray-200 border-b p-4 dark:border-gray-700">
+				<h2 className="font-semibold text-gray-800 text-lg dark:text-gray-200">Databases</h2>
 			</div>
-			<div className="flex-1 overflow-y-auto bg-white p-2">
+			<div className="flex-1 overflow-y-auto bg-white p-2 dark:bg-gray-800">
 				{state.databases.length === 0 ? (
-					<div className="p-4 text-center text-gray-500">
+					<div className="p-4 text-center text-gray-500 dark:text-gray-400">
 						No databases available
 					</div>
 				) : (
@@ -31,12 +31,12 @@ export const Sidebar: React.FC = () => {
 									<button
 										type="button"
 										onClick={() => toggleDatabase(database)}
-										className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
+										className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700"
 									>
 										{state.expandedDatabases.has(database) ? (
-											<ChevronDown className="h-4 w-4 text-gray-500" />
+											<ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
 										) : (
-											<ChevronRight className="h-4 w-4 text-gray-500" />
+											<ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
 										)}
 									</button>
 									<button
@@ -45,7 +45,7 @@ export const Sidebar: React.FC = () => {
 										className={`flex flex-1 items-center rounded-md px-2 py-2 text-left text-sm transition-colors ${
 											state.selectedDatabase === database
 												? "bg-blue-100 text-blue-700"
-												: "text-gray-700 hover:bg-gray-100"
+												: "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 										}`}
 									>
 										<Database className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -54,14 +54,14 @@ export const Sidebar: React.FC = () => {
 								</div>
 
 								{state.expandedDatabases.has(database) && (
-									<div className="ml-6 border-gray-200 border-l pl-2">
+									<div className="ml-6 border-gray-200 border-l pl-2 dark:border-gray-600">
 										{state.loadingTables.has(database) ? (
-											<div className="flex items-center px-3 py-2 text-gray-500 text-sm">
+											<div className="flex items-center px-3 py-2 text-gray-500 text-sm dark:text-gray-400">
 												<Loader2 className="mr-2 h-3 w-3 animate-spin" />
 												Loading tables...
 											</div>
 										) : state.databaseTables[database]?.length === 0 ? (
-											<div className="px-3 py-2 text-gray-500 text-sm">
+											<div className="px-3 py-2 text-gray-500 text-sm dark:text-gray-400">
 												No tables found
 											</div>
 										) : (
@@ -73,12 +73,12 @@ export const Sidebar: React.FC = () => {
 															<button
 																type="button"
 																onClick={() => toggleTable(database, table)}
-																className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100"
+																className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700"
 															>
 																{state.expandedTables.has(tableKey) ? (
-																	<ChevronDown className="h-3 w-3 text-gray-500" />
+																	<ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
 																) : (
-																	<ChevronRight className="h-3 w-3 text-gray-500" />
+																	<ChevronRight className="h-3 w-3 text-gray-500 dark:text-gray-400" />
 																)}
 															</button>
 															<button
@@ -88,7 +88,7 @@ export const Sidebar: React.FC = () => {
 																	state.selectedDatabase === database &&
 																	state.selectedTable === table
 																		? "bg-green-100 text-green-700"
-																		: "text-gray-600 hover:bg-gray-100"
+																		: "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 																}`}
 															>
 																<Table className="mr-2 h-3 w-3 flex-shrink-0" />
@@ -99,13 +99,13 @@ export const Sidebar: React.FC = () => {
 														{state.expandedTables.has(tableKey) && (
 															<div className="ml-4 border-gray-300 border-l pl-2">
 																{state.loadingColumns.has(tableKey) ? (
-																	<div className="flex items-center px-3 py-1 text-gray-500 text-xs">
+																	<div className="flex items-center px-3 py-1 text-gray-500 text-xs dark:text-gray-400">
 																		<Loader2 className="mr-2 h-2 w-2 animate-spin" />
 																		Loading columns...
 																	</div>
 																) : state.tableColumns[tableKey]?.length ===
 																	0 ? (
-																	<div className="px-3 py-1 text-gray-500 text-xs">
+																	<div className="px-3 py-1 text-gray-500 text-xs dark:text-gray-400">
 																		No columns found
 																	</div>
 																) : (

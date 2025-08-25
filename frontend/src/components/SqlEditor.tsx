@@ -72,13 +72,13 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-gray-200 border-b bg-gray-50 p-3">
+			<div className="flex items-center justify-between border-gray-200 border-b bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700">
 				<div className="flex items-center space-x-3">
 					<Button
 						onClick={handleExecute}
 						disabled={isExecuting || !value.trim()}
 						size="sm"
-						className="bg-green-600 text-white hover:bg-green-700"
+						className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
 					>
 						{isExecuting ? (
 							<>
@@ -100,12 +100,12 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 						</Button>
 					)}
 
-					<div className="text-gray-600 text-sm">
+					<div className="text-gray-600 text-sm dark:text-gray-300">
 						{database && `Database: ${database}`}
 					</div>
 				</div>
 
-				<div className="text-gray-500 text-xs">
+				<div className="text-gray-500 text-xs dark:text-gray-400">
 					{selectedText
 						? `Selected: ${selectedText.length} chars`
 						: `Total: ${value.length} chars`}
@@ -124,7 +124,7 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 					placeholder={
 						"-- Enter your SQL query here\n-- Use Ctrl+Enter to execute\n-- Select text to execute only the selection\n\nSELECT * FROM your_table LIMIT 10;"
 					}
-					className="h-full w-full resize-none border-none bg-white p-4 font-mono text-gray-900 text-sm placeholder-gray-400 outline-none"
+					className="h-full w-full resize-none border-none bg-white p-4 font-mono text-gray-900 text-sm placeholder-gray-400 outline-none dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
 					spellCheck={false}
 					style={{
 						tabSize: 2,
@@ -136,7 +136,7 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 				{/* For now, we'll use CSS-based highlighting through the textarea */}
 			</div>
 
-			<div className="border-gray-200 border-t bg-gray-50 px-4 py-2 text-gray-600 text-xs">
+			<div className="border-gray-200 border-t bg-gray-50 px-4 py-2 text-gray-600 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400">
 				<div className="flex justify-between">
 					<span>
 						{selectedText

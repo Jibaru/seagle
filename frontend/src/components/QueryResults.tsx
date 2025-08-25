@@ -112,7 +112,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 	};
 	if (isLoading) {
 		return (
-			<div className="flex h-64 flex-col items-center justify-center text-gray-500">
+			<div className="flex h-64 flex-col items-center justify-center text-gray-500 dark:text-gray-400">
 				<div className="mb-4 h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2" />
 				<div>Executing query...</div>
 				{query && <div className="mt-2 max-w-md truncate text-sm">{query}</div>}
@@ -136,7 +136,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 
 	if (!result) {
 		return (
-			<div className="flex h-64 flex-col items-center justify-center text-gray-500">
+			<div className="flex h-64 flex-col items-center justify-center text-gray-500 dark:text-gray-400">
 				<Database className="mb-4 h-12 w-12" />
 				<div className="mb-2 text-lg">No query executed</div>
 				<div className="text-sm">Execute a SQL query to see results here</div>
@@ -169,11 +169,11 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 			</div>
 
 			{/* Results Content */}
-			<div className="flex-1 overflow-hidden bg-white" style={{ minHeight: 0 }}>
+			<div className="flex-1 overflow-hidden bg-white dark:bg-gray-800" style={{ minHeight: 0 }}>
 				{hasColumns && hasRows ? (
 					/* Table Results */
 					<div
-						className={`h-full border border-gray-300 ${isResizing ? "select-none" : ""}`}
+						className={`h-full border border-gray-300 dark:border-gray-600 ${isResizing ? "select-none" : ""}`}
 						style={{
 							overflow: "auto",
 							maxWidth: "100%",
@@ -182,10 +182,10 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 						}}
 					>
 						<table className="border-collapse" style={{ tableLayout: "auto", width: "100%" }}>
-							<thead className="sticky top-0 z-10 bg-gray-50">
+								<thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-700">
 								<tr>
 									<th
-										className="sticky left-0 z-20 border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-gray-900 text-xs"
+										className="sticky left-0 z-20 border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-gray-900 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
 										style={{ width: "50px" }}
 									>
 										#
@@ -193,7 +193,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 									{result.columns.map((column) => (
 										<th
 											key={`col-${column}`}
-											className="relative border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-gray-900 text-sm"
+											className="relative border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-gray-900 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
 											style={{
 												width: getColumnWidth(column),
 												minWidth: "60px",
@@ -222,10 +222,10 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 								{result.rows.map((row, rowIndex) => (
 									<tr
 										key={`row-${rowIndex}-${row[0]}`}
-										className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}
+										className={rowIndex % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-900"}
 									>
 										<td
-											className="sticky left-0 z-10 border border-gray-300 bg-gray-100 px-2 py-1 text-gray-500 text-xs"
+											className="sticky left-0 z-10 border border-gray-300 bg-gray-100 px-2 py-1 text-gray-500 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400"
 											style={{ width: "50px" }}
 										>
 											{rowIndex + 1}
@@ -239,7 +239,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 											return (
 												<td
 													key={`cell-${rowIndex}-${cellIndex}-${String(cell).slice(0, 10)}`}
-													className="relative border border-gray-300 px-2 py-1 font-mono text-gray-900 text-sm"
+													className="relative border border-gray-300 px-2 py-1 font-mono text-gray-900 text-sm dark:border-gray-600 dark:text-gray-200"
 													style={{
 														width: getColumnWidth(columnName),
 														minWidth: "60px",
@@ -256,7 +256,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 															onChange={(e) => setEditValue(e.target.value)}
 															onBlur={handleEditComplete}
 															onKeyDown={handleEditKeyDown}
-															className="h-full w-full resize-none border-2 border-blue-400 border-none bg-yellow-50 px-2 py-1 font-mono text-sm outline-none"
+															className="h-full w-full resize-none border-2 border-blue-400 border-none bg-yellow-50 px-2 py-1 font-mono text-sm outline-none dark:bg-yellow-900 dark:text-gray-200"
 															style={{
 																minHeight: "32px",
 																maxHeight: "200px",
@@ -266,20 +266,20 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 														/>
 													) : (
 														<div
-															className="flex h-full cursor-pointer items-center px-2 py-1 hover:bg-blue-50"
+															className="flex h-full cursor-pointer items-center px-2 py-1 hover:bg-blue-50 dark:hover:bg-gray-600"
 															title={`Double-click to edit. Value: ${String(cell ?? "")}`}
 														>
 															<div className="w-full truncate">
 																{cell === null ? (
-																	<span className="text-gray-400 italic">
+																	<span className="text-gray-400 italic dark:text-gray-500">
 																		NULL
 																	</span>
 																) : cell === "" ? (
-																	<span className="text-gray-400 italic">
+																	<span className="text-gray-400 italic dark:text-gray-500">
 																		(empty)
 																	</span>
 																) : (
-																	<span className="text-gray-900">
+																	<span className="text-gray-900 dark:text-gray-200">
 																		{String(cell)}
 																	</span>
 																)}
@@ -296,12 +296,12 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 					</div>
 				) : (
 					/* Non-SELECT Results */
-					<div className="flex h-32 items-center justify-center text-gray-600">
+					<div className="flex h-32 items-center justify-center text-gray-600 dark:text-gray-400">
 						<div className="text-center">
 							<div className="font-medium text-lg">
 								{result.rowsAffected} rows affected
 							</div>
-							<div className="mt-1 text-gray-500 text-sm">
+							<div className="mt-1 text-gray-500 text-sm dark:text-gray-400">
 								Query completed in {result.duration}ms
 							</div>
 						</div>
@@ -311,7 +311,7 @@ export const QueryResults: React.FC<QueryResultsProps> = ({
 
 			{/* Footer Info */}
 			{hasRows && (
-				<div className="flex-shrink-0 border-gray-200 border-t bg-gray-50 px-3 py-2 text-gray-600 text-xs">
+				<div className="flex-shrink-0 border-gray-200 border-t bg-gray-50 px-3 py-2 text-gray-600 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400">
 					<div className="flex justify-between">
 						<span>
 							Showing {result.rows.length} of {result.rows.length} rows
