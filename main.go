@@ -2,7 +2,8 @@ package main
 
 import (
 	"embed"
-	"seagle/core/handlers"
+	"seagle/core/infra/handlers"
+	"seagle/core/infra/persistence"
 	"seagle/core/services"
 
 	"github.com/wailsapp/wails/v2"
@@ -17,7 +18,9 @@ func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	connectionService := services.NewConnectionService()
+	connectionRepo := persistence.NewConnection("connections.json")
+
+	connectionService := services.NewConnectionService(connectionRepo)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)

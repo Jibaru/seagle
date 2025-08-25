@@ -1,67 +1,60 @@
 package services
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
 	_ "github.com/lib/pq"
 
+	"seagle/core/domain"
 	"seagle/core/services/types"
 )
 
 // ConnectionService manages database connections
 type ConnectionService struct {
-	connection *types.DatabaseConnection
+	currentConnection *domain.Connection
+	repo              domain.ConnectionRepo
 }
 
 // NewConnectionService creates a new ConnectionService instance
-func NewConnectionService() *ConnectionService {
-	return &ConnectionService{}
+func NewConnectionService(repo domain.ConnectionRepo) *ConnectionService {
+	return &ConnectionService{
+		repo: repo,
+	}
 }
 
-// Connect establishes a connection to PostgreSQL database
+// Connect establishes a connection using DatabaseConfig
 func (cs *ConnectionService) Connect(config types.DatabaseConfig) (*types.DatabaseConnection, error) {
-	connStr, err := cs.buildConnectionString(config)
+	domainConn, err := cs.configToDomainConnection(cs.repo.NextID(), config)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database connection: %w", err)
+	if err := cs.repo.Save(domainConn); err != nil {
+		return nil, fmt.Errorf("failed to save connection: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+	if err := domainConn.Connect(); err != nil {
+		return nil, err
 	}
 
-	connection := &types.DatabaseConnection{
+	cs.currentConnection = domainConn
+
+	return &types.DatabaseConnection{
 		Config:      config,
 		IsConnected: true,
-		DB:          db,
-	}
-
-	cs.connection = connection
-	return connection, nil
+	}, nil
 }
 
 // TestConnection tests the database connection with given parameters
 func (cs *ConnectionService) TestConnection(config types.DatabaseConfig) error {
-	connStr, err := cs.buildConnectionString(config)
+	domainConn, err := cs.configToDomainConnection(cs.repo.NextID(), config)
 	if err != nil {
 		return err
 	}
 
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return fmt.Errorf("failed to open database connection: %w", err)
-	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
+	if err := domainConn.Connect(); err != nil {
+		return err
 	}
 
 	return nil
@@ -69,42 +62,17 @@ func (cs *ConnectionService) TestConnection(config types.DatabaseConfig) error {
 
 // Disconnect closes the current database connection
 func (cs *ConnectionService) Disconnect() error {
-	if cs.connection != nil && cs.connection.DB != nil {
-		if err := cs.connection.DB.Close(); err != nil {
-			return fmt.Errorf("failed to close database connection: %w", err)
-		}
-		cs.connection.IsConnected = false
-		cs.connection = nil
-	}
-	return nil
+	return cs.currentConnection.Disconnect()
 }
 
-// buildConnectionString constructs the PostgreSQL connection string
-func (cs *ConnectionService) buildConnectionString(config types.DatabaseConfig) (string, error) {
-	if config.UseConnectionString {
-		if config.ConnectionString == "" {
-			return "", fmt.Errorf("connection string cannot be empty")
-		}
-		return config.ConnectionString, nil
-	}
-
-	// Validate required fields for form-based connection
-	if config.Host == "" || config.Database == "" || config.Username == "" {
-		return "", fmt.Errorf("host, database, and username are required")
-	}
-
-	sslMode := config.SSLMode
-	if sslMode == "" {
-		sslMode = "require"
-	}
-
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		config.Host, config.Port, config.Username, config.Password, config.Database, sslMode), nil
+// HasActiveConnection checks if there is an active database connection
+func (cs *ConnectionService) HasActiveConnection() bool {
+	return cs.currentConnection != nil && cs.currentConnection.IsConnected()
 }
 
 // GetDatabases returns a list of databases available in the connected PostgreSQL instance
 func (cs *ConnectionService) GetDatabases() ([]string, error) {
-	if cs.connection == nil || cs.connection.DB == nil {
+	if !cs.HasActiveConnection() {
 		return nil, fmt.Errorf("no active database connection")
 	}
 
@@ -115,7 +83,7 @@ func (cs *ConnectionService) GetDatabases() ([]string, error) {
 		ORDER BY datname
 	`
 
-	rows, err := cs.connection.DB.Query(query)
+	rows, err := cs.currentConnection.DB().Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query databases: %w", err)
 	}
@@ -139,28 +107,15 @@ func (cs *ConnectionService) GetDatabases() ([]string, error) {
 
 // GetTables returns a list of tables for a specific database
 func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
-	if cs.connection == nil || cs.connection.DB == nil {
+	if !cs.HasActiveConnection() {
 		return nil, fmt.Errorf("no active database connection")
 	}
 
-	// First, connect to the specific database
-	config := cs.connection.Config
-	config.Database = databaseName
-	
-	connStr, err := cs.buildConnectionString(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build connection string: %w", err)
-	}
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
+	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
+	if err := cpy.Connect(); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
-	}
+	defer cpy.Disconnect()
 
 	query := `
 		SELECT table_name 
@@ -170,7 +125,7 @@ func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
 		ORDER BY table_name
 	`
 
-	rows, err := db.Query(query)
+	rows, err := cpy.DB().Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tables for database %s: %w", databaseName, err)
 	}
@@ -194,28 +149,15 @@ func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
 
 // GetTableColumns returns the columns for a specific table in a database
 func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]types.TableColumn, error) {
-	if cs.connection == nil || cs.connection.DB == nil {
+	if !cs.HasActiveConnection() {
 		return nil, fmt.Errorf("no active database connection")
 	}
 
-	// Connect to the specific database
-	config := cs.connection.Config
-	config.Database = databaseName
-	
-	connStr, err := cs.buildConnectionString(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build connection string: %w", err)
-	}
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
+	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
+	if err := cpy.Connect(); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
-	}
+	defer cpy.Disconnect()
 
 	query := `
 		SELECT 
@@ -229,7 +171,7 @@ func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]
 		ORDER BY ordinal_position
 	`
 
-	rows, err := db.Query(query, tableName)
+	rows, err := cpy.DB().Query(query, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query columns for table %s.%s: %w", databaseName, tableName, err)
 	}
@@ -253,43 +195,30 @@ func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]
 
 // ExecuteQuery executes a SQL query against a specific database and returns the results
 func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.QueryResult, error) {
-	if cs.connection == nil || cs.connection.DB == nil {
+	if !cs.HasActiveConnection() {
 		return nil, fmt.Errorf("no active database connection")
 	}
 
-	// Connect to the specific database
-	config := cs.connection.Config
-	config.Database = databaseName
-	
-	connStr, err := cs.buildConnectionString(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build connection string: %w", err)
-	}
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
+	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
+	if err := cpy.Connect(); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database %s: %w", databaseName, err)
-	}
+	defer cpy.Disconnect()
 
 	start := time.Now()
 
 	// Check if it's a SELECT query or DML/DDL
-	rows, err := db.Query(query)
+	rows, err := cpy.DB().Query(query)
 	if err != nil {
 		// If Query fails, try Exec for DML/DDL statements
-		result, execErr := db.Exec(query)
+		result, execErr := cpy.DB().Exec(query)
 		if execErr != nil {
 			return nil, fmt.Errorf("failed to execute query: %w", execErr)
 		}
-		
+
 		rowsAffected, _ := result.RowsAffected()
 		duration := time.Since(start).Milliseconds()
-		
+
 		return &types.QueryResult{
 			Columns:      []string{},
 			Rows:         [][]interface{}{},
@@ -307,20 +236,20 @@ func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.Qu
 
 	// Prepare result structure
 	var resultRows [][]interface{}
-	
+
 	for rows.Next() {
 		// Create a slice of interface{} to hold the values
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
-		
+
 		for i := range values {
 			valuePtrs[i] = &values[i]
 		}
-		
+
 		if err := rows.Scan(valuePtrs...); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
-		
+
 		// Convert []byte to string for display
 		row := make([]interface{}, len(values))
 		for i, val := range values {
@@ -330,7 +259,7 @@ func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.Qu
 				row[i] = val
 			}
 		}
-		
+
 		resultRows = append(resultRows, row)
 	}
 
@@ -346,4 +275,18 @@ func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.Qu
 		RowsAffected: int64(len(resultRows)),
 		Duration:     duration,
 	}, nil
+}
+
+// Helper function to convert types.DatabaseConfig to domain.Connection
+func (cs *ConnectionService) configToDomainConnection(id string, config types.DatabaseConfig) (*domain.Connection, error) {
+	if config.UseConnectionString && config.ConnectionString != "" {
+		return domain.NewConnectionFromString(id, config.ConnectionString)
+	}
+
+	arguments := make(map[string]string)
+	if config.SSLMode != "" {
+		arguments["sslmode"] = config.SSLMode
+	}
+
+	return domain.NewConnection(id, config.Host, config.Port, config.Database, config.Username, config.Password, arguments), nil
 }

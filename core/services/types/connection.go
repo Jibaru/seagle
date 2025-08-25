@@ -1,7 +1,5 @@
 package types
 
-import "database/sql"
-
 // DatabaseConfig holds database connection parameters
 type DatabaseConfig struct {
 	Host                string `json:"host"`
@@ -18,7 +16,6 @@ type DatabaseConfig struct {
 type DatabaseConnection struct {
 	Config      DatabaseConfig `json:"config"`
 	IsConnected bool           `json:"isConnected"`
-	DB          *sql.DB        `json:"-"`
 }
 
 // TableColumn represents a column in a database table
@@ -31,8 +28,8 @@ type TableColumn struct {
 
 // QueryResult represents the result of a SQL query
 type QueryResult struct {
-	Columns []string        `json:"columns"`
-	Rows    [][]interface{} `json:"rows"`
-	RowsAffected int64      `json:"rowsAffected"`
-	Duration     int64      `json:"duration"` // in milliseconds
+	Columns      []string        `json:"columns"`
+	Rows         [][]interface{} `json:"rows"`
+	RowsAffected int64           `json:"rowsAffected"`
+	Duration     int64           `json:"duration"` // in milliseconds
 }
