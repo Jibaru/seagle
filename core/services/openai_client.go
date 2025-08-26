@@ -85,7 +85,7 @@ func (c *OpenAIClient) GenerateQuery(userPrompt string, metadata *domain.Connect
 
 	// Create the request
 	request := OpenAIRequest{
-		Model: "gpt-5-nano",
+		Model: "gpt-4o",
 		Messages: []OpenAIMessage{
 			{
 				Role:    "system",
