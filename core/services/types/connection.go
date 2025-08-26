@@ -2,6 +2,7 @@ package types
 
 // DatabaseConfig holds database connection parameters
 type DatabaseConfig struct {
+	Vendor              string `json:"vendor"`
 	Host                string `json:"host"`
 	Port                int    `json:"port"`
 	Database            string `json:"database"`
@@ -39,4 +40,3 @@ type ConnectionSummary struct {
 	Host string `json:"host"`
 	Port int    `json:"port"`
 }
-

@@ -7,8 +7,13 @@ import (
 	"strings"
 )
 
+var supportedVendors = map[string]bool{
+	"postgresql": true,
+}
+
 type Connection struct {
 	id        string
+	vendor    string
 	host      string
 	port      int
 	database  string
@@ -17,21 +22,27 @@ type Connection struct {
 	arguments map[string]string
 }
 
-func NewConnection(id, host string, port int, database, username, password string, arguments map[string]string) *Connection {
+func NewConnection(id, vendor, host string, port int, database, username, password string, arguments map[string]string) (*Connection, error) {
+	if !supportedVendors[vendor] {
+		return nil, fmt.Errorf("unsupported vendor: %s", vendor)
+	}
+
 	return &Connection{
 		id:        id,
+		vendor:    vendor,
 		host:      host,
 		port:      port,
 		database:  database,
 		username:  username,
 		password:  password,
 		arguments: arguments,
-	}
+	}, nil
 }
 
 func CopyConnection(conn *Connection, database string) *Connection {
 	return &Connection{
 		id:        conn.id,
+		vendor:    conn.vendor,
 		host:      conn.host,
 		port:      conn.port,
 		database:  database,
@@ -93,7 +104,7 @@ func NewConnectionFromString(id, connStr string) (*Connection, error) {
 		}
 	}
 
-	return NewConnection(id, host, port, database, username, password, arguments), nil
+	return NewConnection(id, "postgresql", host, port, database, username, password, arguments)
 }
 
 func NewConnectionFromMap(data map[string]interface{}) *Connection {
@@ -108,6 +119,7 @@ func NewConnectionFromMap(data map[string]interface{}) *Connection {
 
 	return &Connection{
 		id:        data["id"].(string),
+		vendor:    data["vendor"].(string),
 		host:      data["host"].(string),
 		port:      int(data["port"].(float64)),
 		database:  data["database"].(string),
@@ -121,6 +133,10 @@ func (c *Connection) ID() string {
 	return c.id
 }
 
+func (c *Connection) Vendor() string {
+	return c.vendor
+}
+
 func (c *Connection) Host() string {
 	return c.host
 }
@@ -132,6 +148,7 @@ func (c *Connection) Port() int {
 func (c *Connection) Map() map[string]interface{} {
 	return map[string]interface{}{
 		"id":        c.id,
+		"vendor":    c.vendor,
 		"host":      c.host,
 		"port":      c.port,
 		"database":  c.database,

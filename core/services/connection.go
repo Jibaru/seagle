@@ -3,8 +3,6 @@ package services
 import (
 	"fmt"
 
-	_ "github.com/lib/pq"
-
 	"seagle/core/domain"
 	"seagle/core/services/types"
 )
@@ -274,5 +272,5 @@ func (cs *ConnectionService) configToDomainConnection(id string, config types.Da
 		arguments["sslmode"] = config.SSLMode
 	}
 
-	return domain.NewConnection(id, config.Host, config.Port, config.Database, config.Username, config.Password, arguments), nil
+	return domain.NewConnection(id, config.Vendor, config.Host, config.Port, config.Database, config.Username, config.Password, arguments)
 }

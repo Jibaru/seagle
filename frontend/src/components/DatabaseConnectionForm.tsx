@@ -12,6 +12,7 @@ interface DatabaseConnectionFormProps {
 }
 
 interface DatabaseConfig {
+	vendor: "postgresql";
 	host: string;
 	port: number;
 	database: string;
@@ -26,6 +27,7 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 	onConnectionChange,
 }) => {
 	const [config, setConfig] = useState<DatabaseConfig>({
+		vendor: "postgresql",
 		host: "localhost",
 		port: 5432,
 		database: "",

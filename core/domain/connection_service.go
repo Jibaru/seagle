@@ -4,7 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	_ "github.com/lib/pq"
 )
+
+var driversByVendor = map[string]string{
+	"postgresql": "postgres",
+}
 
 type ConnectionService struct {
 	pool map[string]*sql.DB
@@ -26,7 +32,7 @@ func (s *ConnectionService) pooledDBConn(c *Connection) *sql.DB {
 func (s *ConnectionService) Connect(c *Connection) error {
 	dbConn := s.pooledDBConn(c)
 	if dbConn == nil {
-		db, err := sql.Open("postgres", c.connectionString())
+		db, err := sql.Open(driversByVendor[c.Vendor()], c.connectionString())
 		if err != nil {
 			return fmt.Errorf("failed to open database connection: %w", err)
 		}
