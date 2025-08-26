@@ -45,7 +45,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
 				{/* Saved Connections Section */}
 				<div className="flex justify-center">
-					<SavedConnections onConnectToSaved={onConnectToSaved} />
+					<SavedConnections 
+						onConnectToSaved={onConnectToSaved}
+					/>
 				</div>
 			</div>
 		</div>

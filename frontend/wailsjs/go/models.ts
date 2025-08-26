@@ -1,5 +1,33 @@
 export namespace handlers {
 	
+	export class ConnectByIDInput {
+	    id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectByIDInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	    }
+	}
+	export class ConnectByIDOutput {
+	    success: boolean;
+	    message: string;
+	    databases?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectByIDOutput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.databases = source["databases"];
+	    }
+	}
 	export class ConnectInput {
 	    host: string;
 	    port: number;

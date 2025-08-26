@@ -5,6 +5,8 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { Button } from "./components/ui/button";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DatabaseProvider, useDatabaseStore } from "./store/DatabaseStore";
+import { ConnectionsProvider, useConnectionsStore } from "./store/ConnectionsStore";
+import { ConnectByID } from "../wailsjs/go/handlers/ConnectByIDHandler";
 import "./App.css";
 
 function AppContent() {
@@ -13,16 +15,35 @@ function AppContent() {
 	>("welcome");
 	const [isConnected, setIsConnected] = useState(false);
 	const { setDatabases, resetState } = useDatabaseStore();
+	const { setConnectingId, refreshConnections } = useConnectionsStore();
 
 	const handleNewConnection = () => {
 		setCurrentScreen("connection");
 	};
 
-	const handleConnectToSaved = (connectionId: string) => {
-		// TODO: Implement connecting to saved connection by ID
-		// For now, redirect to connection form
-		console.log("Connecting to saved connection:", connectionId);
-		setCurrentScreen("connection");
+	const handleConnectToSaved = async (connectionId: string) => {
+		try {
+			setConnectingId(connectionId);
+			const result = await ConnectByID({ id: connectionId });
+			
+			if (result.success) {
+				setIsConnected(true);
+				setCurrentScreen("connected");
+				if (result.databases) {
+					setDatabases(result.databases);
+				}
+			} else {
+				// Show error message - for now just log it
+				console.error("Failed to connect:", result.message);
+				// You might want to show a toast or error message to the user here
+				alert(`Connection failed: ${result.message}`);
+			}
+		} catch (error) {
+			console.error("Error connecting to saved connection:", error);
+			alert("Failed to connect to the database. Please try again.");
+		} finally {
+			setConnectingId(null);
+		}
 	};
 
 	const handleConnectionChange = (
@@ -35,6 +56,8 @@ function AppContent() {
 			if (databaseList) {
 				setDatabases(databaseList);
 			}
+			// Refresh connections list after successful connection
+			refreshConnections();
 		} else {
 			resetState();
 		}
@@ -84,9 +107,11 @@ function AppContent() {
 function App() {
 	return (
 		<ThemeProvider>
-			<DatabaseProvider>
-				<AppContent />
-			</DatabaseProvider>
+			<ConnectionsProvider>
+				<DatabaseProvider>
+					<AppContent />
+				</DatabaseProvider>
+			</ConnectionsProvider>
 		</ThemeProvider>
 	);
 }

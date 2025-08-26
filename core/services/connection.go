@@ -46,6 +46,26 @@ func (cs *ConnectionService) Connect(config types.DatabaseConfig) (*types.Databa
 	}, nil
 }
 
+func (cs *ConnectionService) ConnectByID(id string) (*types.DatabaseConnection, error) {
+	conn, err := cs.repo.FindByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find connection by ID: %w", err)
+	}
+	if conn == nil {
+		return nil, fmt.Errorf("connection with ID %s not found", id)
+	}
+
+	if err := conn.Connect(); err != nil {
+		return nil, err
+	}
+
+	cs.currentConnection = conn
+
+	return &types.DatabaseConnection{
+		IsConnected: true,
+	}, nil
+}
+
 // TestConnection tests the database connection with given parameters
 func (cs *ConnectionService) TestConnection(config types.DatabaseConfig) error {
 	domainConn, err := cs.configToDomainConnection(cs.repo.NextID(), config)

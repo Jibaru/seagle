@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Database, Server, Loader2, AlertCircle } from "lucide-react";
 import type React from "react";
 import { Button } from "./ui/button";
-import { ListConnections } from "../../wailsjs/go/handlers/ListConnectionsHandler";
-import type { types } from "../../wailsjs/go/models";
+import { useConnectionsStore } from "../store/ConnectionsStore";
 
 interface SavedConnectionsProps {
 	onConnectToSaved?: (connectionId: string) => void;
@@ -12,31 +11,12 @@ interface SavedConnectionsProps {
 export const SavedConnections: React.FC<SavedConnectionsProps> = ({
 	onConnectToSaved,
 }) => {
-	const [connections, setConnections] = useState<types.ConnectionSummary[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const { state, loadConnections } = useConnectionsStore();
+	const { connections, loading, error, connectingId } = state;
 
 	useEffect(() => {
-		const loadConnections = async () => {
-			try {
-				setLoading(true);
-				setError(null);
-				const result = await ListConnections();
-				if (result.success) {
-					setConnections(result.connections || []);
-				} else {
-					setError(result.message || "Failed to load saved connections");
-				}
-			} catch (err) {
-				setError("Failed to load saved connections");
-				console.error("Error loading connections:", err);
-			} finally {
-				setLoading(false);
-			}
-		};
-
 		loadConnections();
-	}, []);
+	}, [loadConnections]);
 
 	if (loading) {
 		return (
@@ -115,9 +95,17 @@ export const SavedConnections: React.FC<SavedConnectionsProps> = ({
 							<Button
 								size="sm"
 								onClick={() => onConnectToSaved?.(connection.id)}
-								className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800 flex-shrink-0"
+								disabled={connectingId === connection.id}
+								className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800 flex-shrink-0 disabled:opacity-50"
 							>
-								Connect
+								{connectingId === connection.id ? (
+									<>
+										<Loader2 className="h-3 w-3 animate-spin mr-1" />
+										Connecting...
+									</>
+								) : (
+									"Connect"
+								)}
 							</Button>
 						</div>
 					</div>

@@ -29,6 +29,7 @@ func main() {
 	getTableColumnsHnd := handlers.NewGetTableColumnsHandler(connectionService)
 	executeQueryHnd := handlers.NewExecuteQueryHandler(connectionService)
 	listConnHnd := handlers.NewListConnectionsHandler(connectionService)
+	connectByIDHnd := handlers.NewConnectByIDHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -49,6 +50,7 @@ func main() {
 			getTableColumnsHnd,
 			executeQueryHnd,
 			listConnHnd,
+			connectByIDHnd,
 		},
 	})
 

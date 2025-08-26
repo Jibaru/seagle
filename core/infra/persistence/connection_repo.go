@@ -46,6 +46,21 @@ func (r *ConnectionRepo) List() ([]*domain.Connection, error) {
 	return r.load()
 }
 
+func (r *ConnectionRepo) FindByID(id string) (*domain.Connection, error) {
+	connections, err := r.load()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, conn := range connections {
+		if conn.ID() == id {
+			return conn, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (r *ConnectionRepo) load() ([]*domain.Connection, error) {
 	data, err := loadDataFromFile(r.filename)
 	if err != nil {
