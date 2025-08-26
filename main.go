@@ -10,6 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
+	"seagle/core/domain"
 	"seagle/core/infra/handlers"
 	"seagle/core/infra/persistence"
 	"seagle/core/services"
@@ -27,14 +28,17 @@ func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	connectionRepo := persistence.NewConnection("connections.json")
-	metadataRepo := persistence.NewMetadataRepository("metadata.json")
+	domainConnectionService := domain.NewConnectionService()
+	metadataFactory := domain.NewMetadataFactory(domainConnectionService)
+
+	connectionRepo := persistence.NewConnection(persistence.FileAtHomeDir(".seagle", "data", "connections.json"))
+	metadataRepo := persistence.NewMetadataRepository(persistence.FileAtHomeDir(".seagle", "data", "metadata.json"))
 
 	// Get OpenAI API key from environment variable
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
 	openaiClient := services.NewOpenAIClient(openaiAPIKey)
 
-	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, openaiClient)
+	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, domainConnectionService, metadataFactory, openaiClient)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)

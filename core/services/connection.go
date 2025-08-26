@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	_ "github.com/lib/pq"
 
@@ -15,15 +14,25 @@ type ConnectionService struct {
 	currentConnection *domain.Connection
 	repo              domain.ConnectionRepo
 	metadataRepo      domain.MetadataRepo
+	connectionService *domain.ConnectionService
+	metadataFactory   *domain.MetadataFactory
 	openaiClient      *OpenAIClient
 }
 
 // NewConnectionService creates a new ConnectionService instance
-func NewConnectionService(repo domain.ConnectionRepo, metadataRepo domain.MetadataRepo, openaiClient *OpenAIClient) *ConnectionService {
+func NewConnectionService(
+	repo domain.ConnectionRepo,
+	metadataRepo domain.MetadataRepo,
+	connectionService *domain.ConnectionService,
+	metadataFactory *domain.MetadataFactory,
+	openaiClient *OpenAIClient,
+) *ConnectionService {
 	return &ConnectionService{
-		repo:         repo,
-		metadataRepo: metadataRepo,
-		openaiClient: openaiClient,
+		repo:              repo,
+		metadataRepo:      metadataRepo,
+		connectionService: connectionService,
+		metadataFactory:   metadataFactory,
+		openaiClient:      openaiClient,
 	}
 }
 
@@ -38,7 +47,7 @@ func (cs *ConnectionService) Connect(config types.DatabaseConfig) (*types.Databa
 		return nil, fmt.Errorf("failed to save connection: %w", err)
 	}
 
-	if err := domainConn.Connect(); err != nil {
+	if err := cs.connectionService.Connect(domainConn); err != nil {
 		return nil, err
 	}
 
@@ -59,7 +68,7 @@ func (cs *ConnectionService) ConnectByID(id string) (*types.DatabaseConnection, 
 		return nil, fmt.Errorf("connection with ID %s not found", id)
 	}
 
-	if err := conn.Connect(); err != nil {
+	if err := cs.connectionService.Connect(conn); err != nil {
 		return nil, err
 	}
 
@@ -77,7 +86,7 @@ func (cs *ConnectionService) TestConnection(config types.DatabaseConfig) error {
 		return err
 	}
 
-	if err := domainConn.Connect(); err != nil {
+	if err := cs.connectionService.Connect(domainConn); err != nil {
 		return err
 	}
 
@@ -86,12 +95,12 @@ func (cs *ConnectionService) TestConnection(config types.DatabaseConfig) error {
 
 // Disconnect closes the current database connection
 func (cs *ConnectionService) Disconnect() error {
-	return cs.currentConnection.Disconnect()
+	return cs.connectionService.Disconnect(cs.currentConnection)
 }
 
-// HasActiveConnection checks if there is an active database connection
+// HasActiveConnection checks if there is an active connection
 func (cs *ConnectionService) HasActiveConnection() bool {
-	return cs.currentConnection != nil && cs.currentConnection.IsConnected()
+	return cs.currentConnection != nil
 }
 
 // GetDatabases returns a list of databases available in the connected PostgreSQL instance
@@ -100,33 +109,7 @@ func (cs *ConnectionService) GetDatabases() ([]string, error) {
 		return nil, fmt.Errorf("no active database connection")
 	}
 
-	query := `
-		SELECT datname 
-		FROM pg_database 
-		WHERE datistemplate = false
-		ORDER BY datname
-	`
-
-	rows, err := cs.currentConnection.DB().Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query databases: %w", err)
-	}
-	defer rows.Close()
-
-	var databases []string
-	for rows.Next() {
-		var dbName string
-		if err := rows.Scan(&dbName); err != nil {
-			return nil, fmt.Errorf("failed to scan database name: %w", err)
-		}
-		databases = append(databases, dbName)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating database results: %w", err)
-	}
-
-	return databases, nil
+	return cs.connectionService.GetDatabaseNames(cs.currentConnection)
 }
 
 // GetTables returns a list of tables for a specific database
@@ -136,39 +119,12 @@ func (cs *ConnectionService) GetTables(databaseName string) ([]string, error) {
 	}
 
 	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
-	if err := cpy.Connect(); err != nil {
+	if err := cs.connectionService.Connect(cpy); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer cpy.Disconnect()
+	defer cs.connectionService.Disconnect(cpy)
 
-	query := `
-		SELECT table_name 
-		FROM information_schema.tables 
-		WHERE table_schema = 'public' 
-		AND table_type = 'BASE TABLE'
-		ORDER BY table_name
-	`
-
-	rows, err := cpy.DB().Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query tables for database %s: %w", databaseName, err)
-	}
-	defer rows.Close()
-
-	var tables []string
-	for rows.Next() {
-		var tableName string
-		if err := rows.Scan(&tableName); err != nil {
-			return nil, fmt.Errorf("failed to scan table name: %w", err)
-		}
-		tables = append(tables, tableName)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating table results: %w", err)
-	}
-
-	return tables, nil
+	return cs.connectionService.GetTableNames(cpy, databaseName)
 }
 
 // GetTableColumns returns the columns for a specific table in a database
@@ -178,43 +134,27 @@ func (cs *ConnectionService) GetTableColumns(databaseName, tableName string) ([]
 	}
 
 	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
-	if err := cpy.Connect(); err != nil {
+	if err := cs.connectionService.Connect(cpy); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer cpy.Disconnect()
+	defer cs.connectionService.Disconnect(cpy)
 
-	query := `
-		SELECT 
-			column_name,
-			data_type,
-			is_nullable = 'YES' as is_nullable,
-			COALESCE(column_default, '') as column_default
-		FROM information_schema.columns 
-		WHERE table_schema = 'public' 
-		AND table_name = $1
-		ORDER BY ordinal_position
-	`
-
-	rows, err := cpy.DB().Query(query, tableName)
+	columns, err := cs.connectionService.GetTableColumns(cpy, databaseName, tableName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query columns for table %s.%s: %w", databaseName, tableName, err)
+		return nil, fmt.Errorf("failed to get columns for table %s: %w", tableName, err)
 	}
-	defer rows.Close()
 
-	var columns []types.TableColumn
-	for rows.Next() {
-		var col types.TableColumn
-		if err := rows.Scan(&col.Name, &col.DataType, &col.IsNullable, &col.DefaultValue); err != nil {
-			return nil, fmt.Errorf("failed to scan column: %w", err)
+	result := make([]types.TableColumn, len(columns))
+	for i, col := range columns {
+		result[i] = types.TableColumn{
+			Name:         col.Name(),
+			DataType:     col.DataType(),
+			IsNullable:   col.IsNullable(),
+			DefaultValue: col.DefaultValue(),
 		}
-		columns = append(columns, col)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating column results: %w", err)
-	}
-
-	return columns, nil
+	return result, nil
 }
 
 // ExecuteQuery executes a SQL query against a specific database and returns the results
@@ -224,80 +164,21 @@ func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.Qu
 	}
 
 	cpy := domain.CopyConnection(cs.currentConnection, databaseName)
-	if err := cpy.Connect(); err != nil {
+	if err := cs.connectionService.Connect(cpy); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer cpy.Disconnect()
+	defer cs.connectionService.Disconnect(cpy)
 
-	start := time.Now()
-
-	// Check if it's a SELECT query or DML/DDL
-	rows, err := cpy.DB().Query(query)
+	res, err := cs.connectionService.ExecQuery(cpy, query)
 	if err != nil {
-		// If Query fails, try Exec for DML/DDL statements
-		result, execErr := cpy.DB().Exec(query)
-		if execErr != nil {
-			return nil, fmt.Errorf("failed to execute query: %w", execErr)
-		}
-
-		rowsAffected, _ := result.RowsAffected()
-		duration := time.Since(start).Milliseconds()
-
-		return &types.QueryResult{
-			Columns:      []string{},
-			Rows:         [][]interface{}{},
-			RowsAffected: rowsAffected,
-			Duration:     duration,
-		}, nil
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
-	defer rows.Close()
-
-	// Get column information
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get columns: %w", err)
-	}
-
-	// Prepare result structure
-	var resultRows [][]interface{}
-
-	for rows.Next() {
-		// Create a slice of interface{} to hold the values
-		values := make([]interface{}, len(columns))
-		valuePtrs := make([]interface{}, len(columns))
-
-		for i := range values {
-			valuePtrs[i] = &values[i]
-		}
-
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
-		}
-
-		// Convert []byte to string for display
-		row := make([]interface{}, len(values))
-		for i, val := range values {
-			if b, ok := val.([]byte); ok {
-				row[i] = string(b)
-			} else {
-				row[i] = val
-			}
-		}
-
-		resultRows = append(resultRows, row)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
-	}
-
-	duration := time.Since(start).Milliseconds()
 
 	return &types.QueryResult{
-		Columns:      columns,
-		Rows:         resultRows,
-		RowsAffected: int64(len(resultRows)),
-		Duration:     duration,
+		Columns:      res.Columns,
+		Rows:         res.Rows,
+		RowsAffected: res.RowsAffected,
+		Duration:     res.Duration,
 	}, nil
 }
 
@@ -327,7 +208,7 @@ func (cs *ConnectionService) AnalyzeConnectionMetadata() error {
 	}
 
 	// Use the domain method to analyze metadata
-	domainMetadata, err := domain.AnalyzeConnectionMetadata(cs.currentConnection)
+	domainMetadata, err := cs.metadataFactory.NewConnectionMetadata(cs.currentConnection)
 	if err != nil {
 		return fmt.Errorf("failed to analyze connection metadata: %w", err)
 	}

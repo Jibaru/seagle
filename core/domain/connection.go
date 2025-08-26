@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"database/sql"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -16,8 +15,6 @@ type Connection struct {
 	username  string
 	password  string
 	arguments map[string]string
-
-	conn *sql.DB
 }
 
 func NewConnection(id, host string, port int, database, username, password string, arguments map[string]string) *Connection {
@@ -156,40 +153,4 @@ func (c *Connection) connectionString() string {
 	}
 
 	return dbURL
-}
-
-func (c *Connection) Connect() error {
-	if c.conn == nil {
-		db, err := sql.Open("postgres", c.connectionString())
-		if err != nil {
-			return fmt.Errorf("failed to open database connection: %w", err)
-		}
-
-		c.conn = db
-	}
-
-	if err := c.conn.Ping(); err != nil {
-		c.conn.Close()
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Connection) Disconnect() error {
-	if c.conn != nil {
-		if err := c.conn.Close(); err != nil {
-			return fmt.Errorf("failed to close database connection: %w", err)
-		}
-		c.conn = nil
-	}
-	return nil
-}
-
-func (c *Connection) IsConnected() bool {
-	return c.conn != nil
-}
-
-func (c *Connection) DB() *sql.DB {
-	return c.conn
 }
