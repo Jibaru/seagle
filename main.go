@@ -20,8 +20,9 @@ func main() {
 	app := NewApp()
 
 	connectionRepo := persistence.NewConnection("connections.json")
+	metadataRepo := persistence.NewMetadataRepository("metadata.json")
 
-	connectionService := services.NewConnectionService(connectionRepo)
+	connectionService := services.NewConnectionService(connectionRepo, metadataRepo)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)
@@ -31,6 +32,7 @@ func main() {
 	executeQueryHnd := handlers.NewExecuteQueryHandler(connectionService)
 	listConnHnd := handlers.NewListConnectionsHandler(connectionService)
 	connectByIDHnd := handlers.NewConnectByIDHandler(connectionService)
+	analyzeMetadataHnd := handlers.NewAnalyzeMetadataHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -53,6 +55,7 @@ func main() {
 			executeQueryHnd,
 			listConnHnd,
 			connectByIDHnd,
+			analyzeMetadataHnd,
 		},
 	})
 

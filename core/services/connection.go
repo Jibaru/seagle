@@ -14,12 +14,14 @@ import (
 type ConnectionService struct {
 	currentConnection *domain.Connection
 	repo              domain.ConnectionRepo
+	metadataRepo      domain.MetadataRepo
 }
 
 // NewConnectionService creates a new ConnectionService instance
-func NewConnectionService(repo domain.ConnectionRepo) *ConnectionService {
+func NewConnectionService(repo domain.ConnectionRepo, metadataRepo domain.MetadataRepo) *ConnectionService {
 	return &ConnectionService{
-		repo: repo,
+		repo:         repo,
+		metadataRepo: metadataRepo,
 	}
 }
 
@@ -314,6 +316,26 @@ func (cs *ConnectionService) ListConnections() ([]types.ConnectionSummary, error
 	}
 
 	return summaries, nil
+}
+
+// AnalyzeConnectionMetadata analyzes the current connection and persists the metadata
+func (cs *ConnectionService) AnalyzeConnectionMetadata() error {
+	if !cs.HasActiveConnection() {
+		return fmt.Errorf("no active database connection")
+	}
+
+	// Use the domain method to analyze metadata
+	domainMetadata, err := domain.AnalyzeConnectionMetadata(cs.currentConnection)
+	if err != nil {
+		return fmt.Errorf("failed to analyze connection metadata: %w", err)
+	}
+
+	// Persist the metadata using the repository
+	if err := cs.metadataRepo.Save(domainMetadata); err != nil {
+		return fmt.Errorf("failed to persist connection metadata: %w", err)
+	}
+
+	return nil
 }
 
 // Helper function to convert types.DatabaseConfig to domain.Connection
