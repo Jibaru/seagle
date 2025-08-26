@@ -33,3 +33,9 @@ type QueryResult struct {
 	RowsAffected int64           `json:"rowsAffected"`
 	Duration     int64           `json:"duration"` // in milliseconds
 }
+
+type ConnectionSummary struct {
+	ID   string `json:"id"`
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}

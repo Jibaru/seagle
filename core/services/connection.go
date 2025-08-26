@@ -277,6 +277,25 @@ func (cs *ConnectionService) ExecuteQuery(databaseName, query string) (*types.Qu
 	}, nil
 }
 
+// ListConnections returns a list of saved connections
+func (cs *ConnectionService) ListConnections() ([]types.ConnectionSummary, error) {
+	connections, err := cs.repo.List()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list connections: %w", err)
+	}
+
+	summaries := make([]types.ConnectionSummary, len(connections))
+	for i, conn := range connections {
+		summaries[i] = types.ConnectionSummary{
+			ID:   conn.ID(),
+			Host: conn.Host(),
+			Port: conn.Port(),
+		}
+	}
+
+	return summaries, nil
+}
+
 // Helper function to convert types.DatabaseConfig to domain.Connection
 func (cs *ConnectionService) configToDomainConnection(id string, config types.DatabaseConfig) (*domain.Connection, error) {
 	if config.UseConnectionString && config.ConnectionString != "" {

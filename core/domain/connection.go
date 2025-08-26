@@ -120,6 +120,18 @@ func NewConnectionFromMap(data map[string]interface{}) *Connection {
 	}
 }
 
+func (c *Connection) ID() string {
+	return c.id
+}
+
+func (c *Connection) Host() string {
+	return c.host
+}
+
+func (c *Connection) Port() int {
+	return c.port
+}
+
 func (c *Connection) Map() map[string]interface{} {
 	return map[string]interface{}{
 		"id":        c.id,
