@@ -17,42 +17,85 @@ Seagle is a desktop application similar to JetBrains DataGrip, designed to conne
   - Test connection functionality before connecting
   - Connect/disconnect with proper state management
   - Connection status tracking
+  - Saved connections with persistent storage (JSON file)
+  - Connect by ID for quick access to saved connections
 - **Database Discovery:**
   - Automatic database enumeration after successful connection
   - PostgreSQL system database filtering
   - Alphabetically sorted database list
 
-### 🚧 Roadmap - **PENDING**
-- List databases in the sidebar
-- List tables of the database in the sidebar (like a tree view)
-- List fields of each table in the sidebar  
-- Perform queries on the selected database and show results in table format
+### ✅ Database Schema Explorer - **COMPLETED**
+- **Sidebar Navigation:**
+  - Hierarchical tree view (Databases → Tables → Columns)
+  - Expandable/collapsible database and table nodes
+  - Visual loading states for async operations
+  - Database, table, and column selection with highlighting
+- **Table Structure:**
+  - Automatic table listing for selected databases
+  - Column information display (name, data type, nullable, default values)
+  - Real-time loading indicators
+
+### ✅ Query Interface - **COMPLETED**
+- **SQL Editor:**
+  - Full-featured SQL query editor
+  - Query execution with keyboard shortcuts
+  - Database context awareness
+  - Execute/Stop query functionality
+- **Results Display:**
+  - Tabular results presentation
+  - Query performance metrics (duration, rows affected)
+  - Error handling and display
+  - Support for both SELECT and DML/DDL operations
+
+### ✅ User Interface - **COMPLETED**
+- **Modern Layout:**
+  - DataGrip-inspired interface design
+  - Dark/Light theme toggle support
+  - Responsive sidebar and main content areas
+  - Header with database/table context display
+- **State Management:**
+  - React Context for theme management
+  - Zustand stores for database and connection state
+  - Persistent UI state across sessions
 
 ## 🏗️ Current Architecture
 
 ### Directory Structure
 ```
 seagle/
-├── main.go                    # Application entry point
+├── main.go                    # Application entry point with handler bindings
 ├── app.go                     # Minimal Wails app struct (context only)
 ├── go.mod                     # Go module dependencies
 ├── wails.json                 # Wails project configuration
-├── gorules.md                 # Architecture rules and conventions
+├── Makefile                   # Build automation
 ├── README.md                  # Standard Wails template README
-├── core/                      # Core business logic
-│   ├── handlers/              # Individual request handlers (Wails bindings)
-│   │   ├── connect.go         # Database connection handler
-│   │   ├── test_connection.go # Connection testing handler
-│   │   └── disconnect.go      # Disconnection handler
-│   ├── services/              # Business logic services
-│   │   ├── connection.go      # Connection service with GetDatabases()
-│   │   └── types/             # Shared type definitions
-│   │       └── connection.go  # DatabaseConfig, DatabaseConnection types
+├── CLAUDE.md                  # Project documentation and architecture
+├── core/                      # Core business logic (Clean Architecture)
+│   ├── domain/                # Domain entities and repository interfaces
+│   │   ├── connection.go      # Connection domain entity with business rules
+│   │   └── connection_repo.go # Repository interface
+│   ├── infra/                 # Infrastructure layer
+│   │   ├── handlers/          # Wails handlers (application layer)
+│   │   │   ├── connect.go         # Database connection handler
+│   │   │   ├── connect_by_id.go   # Connect by saved ID handler
+│   │   │   ├── disconnect.go      # Disconnection handler
+│   │   │   ├── test_connection.go # Connection testing handler
+│   │   │   ├── get_tables.go      # Tables listing handler
+│   │   │   ├── get_table_columns.go # Table columns handler
+│   │   │   ├── execute_query.go   # Query execution handler
+│   │   │   └── list_connections.go # Saved connections handler
+│   │   └── persistence/       # Data persistence layer
+│   │       ├── common.go          # Common utilities
+│   │       └── connection_repo.go # JSON file repository implementation
+│   └── services/              # Application services (use cases)
+│       ├── connection.go      # Connection service with business logic
+│       └── types/             # Shared type definitions
+│           └── connection.go  # DTOs and data structures
 └── frontend/                  # React/TypeScript frontend
     ├── package.json           # Frontend dependencies and scripts
     ├── vite.config.ts         # Vite build configuration
-    ├── tailwind.config.js     # Tailwind CSS configuration
-    ├── postcss.config.js      # PostCSS configuration
+    ├── tailwind.config.cjs    # Tailwind CSS configuration
+    ├── postcss.config.cjs     # PostCSS configuration
     ├── biome.json             # Biome linter configuration
     ├── src/
     │   ├── components/        # React components
@@ -60,12 +103,30 @@ seagle/
     │   │   │   ├── button.tsx # Button component
     │   │   │   ├── input.tsx  # Input component
     │   │   │   └── label.tsx  # Label component
-    │   │   ├── DatabaseConnectionForm.tsx # Main connection form
-    │   │   └── WelcomeScreen.tsx          # Landing screen
+    │   │   ├── DatabaseConnectionForm.tsx # Connection form component
+    │   │   ├── WelcomeScreen.tsx          # Landing screen with saved connections
+    │   │   ├── MainLayout.tsx             # Main application layout
+    │   │   ├── Sidebar.tsx                # Database tree navigation
+    │   │   ├── QueryInterface.tsx         # SQL query interface
+    │   │   ├── SqlEditor.tsx              # SQL editor component
+    │   │   ├── QueryResults.tsx           # Query results display
+    │   │   ├── SavedConnections.tsx       # Saved connections management
+    │   │   └── ThemeToggle.tsx            # Dark/Light theme toggle
+    │   ├── contexts/          # React contexts
+    │   │   └── ThemeContext.tsx           # Theme management context
+    │   ├── store/             # State management
+    │   │   ├── DatabaseStore.tsx          # Database and UI state (Zustand)
+    │   │   └── ConnectionsStore.tsx       # Connections state (Zustand)
+    │   ├── lib/
+    │   │   └── utils.ts       # Utility functions
     │   ├── App.tsx            # Main application component
-    │   └── App.css            # Global styles
+    │   ├── App.css            # Global styles
+    │   └── main.tsx           # React entry point
     └── wailsjs/               # Generated Wails bindings
-        └── go/handlers/       # TypeScript bindings for Go handlers
+        ├── go/
+        │   ├── handlers/      # TypeScript bindings for Go handlers
+        │   └── models.ts      # Generated type definitions
+        └── runtime/           # Wails runtime bindings
 ```
 
 ## 🛠️ Technology Stack
@@ -74,7 +135,9 @@ seagle/
 - **Framework**: Wails v2.10.2 (Desktop application framework)
 - **Language**: Go 1.23
 - **Database Driver**: github.com/lib/pq v1.10.9 (PostgreSQL)
-- **Architecture Pattern**: Clean Architecture (Handlers/Services/Types)
+- **Architecture Pattern**: Clean Architecture (Domain/Infrastructure/Services)
+- **UUID Generation**: github.com/google/uuid v1.6.0 (Connection IDs)
+- **Persistence**: JSON file-based storage for connection settings
 
 ### Frontend (React/TypeScript)
 - **Framework**: React 18.2.0 with TypeScript 4.6.4
@@ -120,29 +183,31 @@ seagle/
 - **Headings:** Bold weights with proper text hierarchy
 - **Body:** Regular weight, high contrast for readability
 
-## 📐 Architecture Rules (gorules.md)
+## 📐 Architecture Rules
 
-### Handler Layer (`/core/handlers`)
-- **Single Responsibility**: Each handler is a struct with exactly 1 method
-- **DTO Pattern**: Each handler receives input as struct (DTO) if needed
-- **Return Pattern**: Each handler returns output as struct pointer (DTO) and error if needed  
-- **API Endpoints**: Handlers act as API endpoints for the frontend (Wails bindings)
-- **Naming Convention**:
-  - Handler: `{Action}Handler` (e.g., `ConnectHandler`)
-  - Method: Same as action without "Handler" suffix (e.g., `Connect`)
-  - Input: `{Action}Input` (e.g., `ConnectInput`)
-  - Output: `{Action}Output` (e.g., `ConnectOutput`)
+### Clean Architecture Implementation
 
-### Service Layer (`/core/services`)
-- **Business Rules**: Services contain the core business logic of the application
-- **State Management**: Can maintain state (desktop environment allows this)
-- **Use Cases**: Single service can have multiple methods as use-case entry points
-- **Data Access**: Responsible for database operations and external API calls
+#### Domain Layer (`/core/domain`)
+- **Entities**: Core business objects (Connection) with encapsulated business rules
+- **Repository Interfaces**: Contracts for data persistence (ConnectionRepo)
+- **Business Logic**: Domain entities contain validation and business rules
+- **No Dependencies**: Domain layer has no external dependencies
 
-### Type Layer (`/core/services/types`)
-- **Shared Structures**: Common data types used across handlers and services
-- **Data Transfer**: Clean interfaces for data passing between layers
-- **JSON Serialization**: Proper JSON tags for frontend communication
+#### Infrastructure Layer (`/core/infra`)
+- **Handlers** (`/core/infra/handlers`): Wails application endpoints
+  - Single Responsibility: Each handler handles one specific action
+  - DTO Pattern: Structured input/output with proper validation
+  - Error Handling: Consistent error responses for frontend consumption
+  - Naming Convention: `{Action}Handler` with `{Action}Input`/`{Action}Output`
+- **Persistence** (`/core/infra/persistence`): Repository implementations
+  - File-based JSON storage for connection configurations
+  - Interface compliance with domain repository contracts
+
+#### Service Layer (`/core/services`)
+- **Use Cases**: Application-specific business logic orchestration
+- **State Management**: Connection lifecycle and database operations
+- **Cross-cutting Concerns**: Database connectivity, transaction management
+- **Type Definitions** (`/core/services/types`): DTOs for data transfer
 
 ## 🔧 Build & Development
 
@@ -151,7 +216,10 @@ seagle/
 - **Build Production**: `wails build` (creates executable)
 - **Frontend Development**: `npm run dev` (Vite dev server in frontend/)
 - **Frontend Build**: `npm run build` (TypeScript compile + Vite build)
-- **Frontend Linting**: `npm run lint` (Biome linter with auto-fix)
+- **Frontend Linting**: `npm run biome` (Biome check, lint, and format)
+  - `npm run lint` (Biome linter with auto-fix)
+  - `npm run format` (Biome formatter)
+  - `npm run check` (Biome combined check)
 
 ### Configuration Files
 - **wails.json**: Wails project configuration and build settings
@@ -164,30 +232,69 @@ seagle/
 ## 🔗 Data Flow
 
 ### Connection Process
-1. **Frontend:** User fills connection form or connection string
-2. **Handler:** `ConnectHandler.Connect()` receives `ConnectInput` 
-3. **Service:** `ConnectionService.Connect()` establishes PostgreSQL connection
-4. **Service:** `ConnectionService.GetDatabases()` queries available databases
-5. **Handler:** Returns `ConnectOutput` with success status, message, and database list
-6. **Frontend:** Updates UI state and displays available databases
+1. **Frontend:** User fills connection form or selects saved connection
+2. **Handler:** `ConnectHandler.Connect()` or `ConnectByIDHandler.ConnectByID()` receives input
+3. **Service:** `ConnectionService.Connect()` creates/retrieves domain connection
+4. **Persistence:** Connection saved to JSON file with UUID
+5. **Domain:** Connection entity handles PostgreSQL connection logic
+6. **Service:** `ConnectionService.GetDatabases()` queries available databases
+7. **Handler:** Returns success status, message, and database list
+8. **Frontend:** Updates UI state and displays database tree
+
+### Query Execution Flow
+1. **Frontend:** User enters SQL query in editor
+2. **Handler:** `ExecuteQueryHandler.ExecuteQuery()` receives query and database
+3. **Service:** `ConnectionService.ExecuteQuery()` connects to specific database
+4. **Domain:** Connection handles query execution (SELECT/DML/DDL)
+5. **Service:** Formats results with metadata (columns, rows, duration)
+6. **Handler:** Returns structured query results or error
+7. **Frontend:** Displays results in tabular format with performance metrics
+
+### Schema Discovery Flow
+1. **Frontend:** User expands database/table in sidebar
+2. **Handler:** `GetTablesHandler` or `GetTableColumnsHandler` called
+3. **Service:** Connection service queries PostgreSQL system tables
+4. **Database:** Queries `information_schema` for metadata
+5. **Service:** Formats table/column information
+6. **Frontend:** Updates tree view with loading states and data
 
 ## 🎯 Component Architecture
 
 ### Screen Management
-- **WelcomeScreen:** Entry point with Seagle branding and "New Connection" CTA
+- **WelcomeScreen:** Entry point with branding and saved connections list
 - **DatabaseConnectionForm:** Two-mode form (individual fields vs connection string)
-- **Success Screen:** Post-connection confirmation with database info
+- **MainLayout:** Primary interface with sidebar and query/table views
 
 ### State Management
 ```typescript
 type ScreenState = 'welcome' | 'connection' | 'connected';
+
+// Zustand stores
+interface DatabaseState {
+  databases: string[];
+  selectedDatabase: string | null;
+  selectedTable: string | null;
+  expandedDatabases: Set<string>;
+  expandedTables: Set<string>;
+  databaseTables: Record<string, string[]>;
+  tableColumns: Record<string, TableColumn[]>;
+  loadingTables: Set<string>;
+  loadingColumns: Set<string>;
+}
+
+interface ConnectionsState {
+  connections: ConnectionSummary[];
+  connectingId: string | null;
+  isLoading: boolean;
+}
 ```
 
-### Form Features
-- **Toggle Modes**: Radio buttons to switch between form fields and connection string
-- **Real-time Validation**: Field-level validation with error display
-- **Loading States**: Visual feedback during connection attempts
-- **SSL Configuration**: Dropdown with PostgreSQL SSL modes
+### Component Features
+- **Hierarchical Navigation**: Tree view with expand/collapse functionality
+- **Async State Management**: Loading indicators for database operations
+- **Theme Support**: Dark/light mode with React Context
+- **Real-time Updates**: Zustand state synchronization across components
+- **Error Handling**: Comprehensive error states and user feedback
 
 ## 🚦 Development Guidelines
 
@@ -199,36 +306,47 @@ type ScreenState = 'welcome' | 'connection' | 'connected';
 - **Error Handling**: Comprehensive error handling with user-friendly messages
 
 ### Current Implementation Details
-- **Database Connection**: Full PostgreSQL connectivity with SSL support
-- **UI State Management**: React state with proper screen transitions
+- **Database Connection**: Full PostgreSQL connectivity with SSL support and persistence
+- **Schema Explorer**: Complete database/table/column tree navigation
+- **Query Interface**: SQL editor with execution and results display
+- **UI State Management**: Zustand stores with React Context for theme
 - **Type Safety**: TypeScript throughout with proper Go-to-TS bindings
 - **Component Architecture**: shadcn/ui components with consistent styling
-- **Error Feedback**: User-friendly error messages and loading indicators
+- **Error Feedback**: Comprehensive error handling and loading states
 
-### Next Development Phase
-- **Sidebar Implementation**: Database and table tree view
-- **Schema Explorer**: Table and column information display
-- **Query Interface**: SQL editor with syntax highlighting and execution
+### Potential Future Enhancements
 - **AI Integration**: Query assistance and optimization suggestions
+- **Advanced Query Features**: Query history, favorites, and templates
+- **Data Export**: CSV, JSON, and other format exports
+- **Connection Profiles**: Connection grouping and organization
+- **Performance Monitoring**: Query execution analysis and optimization tips
 
 ## 🎯 Current Status Summary
 
 ### ✅ Completed Features
-- PostgreSQL connection management (connect/test/disconnect)
-- Dual-mode connection form (fields vs connection string)
-- Database discovery and enumeration
-- Clean architecture with proper separation of concerns
-- Modern React/TypeScript frontend with shadcn/ui
-- Responsive UI with loading states and error handling
-- SSL connection support with multiple modes
+- **Database Connectivity**: Full PostgreSQL connection management with SSL support
+- **Connection Persistence**: JSON-based storage with UUID identification
+- **Schema Navigation**: Complete database/table/column tree explorer
+- **Query Interface**: SQL editor with execution, results, and performance metrics
+- **UI/UX**: Modern interface with dark/light theme support
+- **State Management**: Comprehensive state handling with Zustand and React Context
+- **Error Handling**: Robust error states and user feedback
 
 ### 📋 Technical Achievements
-- Wails v2.10.2 desktop application framework integration
-- Clean architecture following gorules.md specifications
-- Individual handlers with proper DTOs and error handling
-- PostgreSQL database service with connection pooling
-- Modern frontend with Vite, Tailwind CSS, and TypeScript
-- Component library with shadcn/ui and Radix UI primitives
-- Biome linting for code quality and consistency
+- **Clean Architecture**: Domain-driven design with proper layer separation
+- **Type Safety**: Full TypeScript coverage with Go-to-TS bindings
+- **Modern Tooling**: Vite build system, Tailwind CSS, Biome linting
+- **Component Library**: shadcn/ui with Radix UI primitives
+- **Performance**: Async operations with loading states
+- **Code Quality**: Consistent patterns and comprehensive error handling
 
-This architecture provides a solid foundation for building the remaining database exploration and query features while maintaining clean separation of concerns and established patterns.
+### 🚀 Project Status
+Seagle has reached a **feature-complete MVP state** as a PostgreSQL database management tool. The core functionality equivalent to basic DataGrip features is fully implemented:
+
+- ✅ Connection management with persistence
+- ✅ Database schema exploration 
+- ✅ SQL query execution with results
+- ✅ Modern desktop interface
+- ✅ Clean, maintainable architecture
+
+The project provides a solid foundation for future enhancements while maintaining excellent code quality and user experience standards.
