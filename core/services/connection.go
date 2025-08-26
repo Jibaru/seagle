@@ -15,13 +15,15 @@ type ConnectionService struct {
 	currentConnection *domain.Connection
 	repo              domain.ConnectionRepo
 	metadataRepo      domain.MetadataRepo
+	openaiClient      *OpenAIClient
 }
 
 // NewConnectionService creates a new ConnectionService instance
-func NewConnectionService(repo domain.ConnectionRepo, metadataRepo domain.MetadataRepo) *ConnectionService {
+func NewConnectionService(repo domain.ConnectionRepo, metadataRepo domain.MetadataRepo, openaiClient *OpenAIClient) *ConnectionService {
 	return &ConnectionService{
 		repo:         repo,
 		metadataRepo: metadataRepo,
+		openaiClient: openaiClient,
 	}
 }
 
@@ -336,6 +338,48 @@ func (cs *ConnectionService) AnalyzeConnectionMetadata() error {
 	}
 
 	return nil
+}
+
+// GenerateQuery generates a SQL query using AI based on natural language input
+func (cs *ConnectionService) GenerateQuery(request types.GenerateQueryRequest) (*types.GenerateQueryResult, error) {
+	if !cs.HasActiveConnection() {
+		return nil, fmt.Errorf("no active database connection")
+	}
+
+	// Check if metadata exists for the current connection
+	connectionID := cs.currentConnection.ID()
+	metadata, err := cs.metadataRepo.FindByConnectionID(connectionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing metadata: %w", err)
+	}
+
+	// If metadata doesn't exist, generate it first
+	if metadata == nil {
+		if err := cs.AnalyzeConnectionMetadata(); err != nil {
+			return nil, fmt.Errorf("failed to generate metadata: %w", err)
+		}
+
+		// Retrieve the newly generated metadata
+		metadata, err = cs.metadataRepo.FindByConnectionID(connectionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve generated metadata: %w", err)
+		}
+
+		if metadata == nil {
+			return nil, fmt.Errorf("metadata generation failed")
+		}
+	}
+
+	// Use OpenAI to generate the query
+	generatedQuery, err := cs.openaiClient.GenerateQuery(request.Prompt, metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate query with AI: %w", err)
+	}
+
+	return &types.GenerateQueryResult{
+		GeneratedQuery: generatedQuery,
+		OriginalPrompt: request.Prompt,
+	}, nil
 }
 
 // Helper function to convert types.DatabaseConfig to domain.Connection

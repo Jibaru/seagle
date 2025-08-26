@@ -2,7 +2,10 @@ package main
 
 import (
 	"embed"
+	"log"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -16,13 +19,22 @@ import (
 var assets embed.FS
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Create an instance of the app structure
 	app := NewApp()
 
 	connectionRepo := persistence.NewConnection("connections.json")
 	metadataRepo := persistence.NewMetadataRepository("metadata.json")
 
-	connectionService := services.NewConnectionService(connectionRepo, metadataRepo)
+	// Get OpenAI API key from environment variable
+	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
+	openaiClient := services.NewOpenAIClient(openaiAPIKey)
+
+	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, openaiClient)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)
@@ -33,9 +45,10 @@ func main() {
 	listConnHnd := handlers.NewListConnectionsHandler(connectionService)
 	connectByIDHnd := handlers.NewConnectByIDHandler(connectionService)
 	analyzeMetadataHnd := handlers.NewAnalyzeMetadataHandler(connectionService)
+	genQueryHnd := handlers.NewGenQueryHandler(connectionService)
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:            "seagle",
 		Width:            1024,
 		Height:           768,
@@ -56,6 +69,7 @@ func main() {
 			listConnHnd,
 			connectByIDHnd,
 			analyzeMetadataHnd,
+			genQueryHnd,
 		},
 	})
 
