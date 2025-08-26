@@ -18,6 +18,13 @@ function AppContent() {
 		setCurrentScreen("connection");
 	};
 
+	const handleConnectToSaved = (connectionId: string) => {
+		// TODO: Implement connecting to saved connection by ID
+		// For now, redirect to connection form
+		console.log("Connecting to saved connection:", connectionId);
+		setCurrentScreen("connection");
+	};
+
 	const handleConnectionChange = (
 		connected: boolean,
 		databaseList?: string[],
@@ -40,7 +47,12 @@ function AppContent() {
 	};
 
 	if (currentScreen === "welcome") {
-		return <WelcomeScreen onNewConnection={handleNewConnection} />;
+		return (
+			<WelcomeScreen 
+				onNewConnection={handleNewConnection}
+				onConnectToSaved={handleConnectToSaved}
+			/>
+		);
 	}
 
 	if (currentScreen === "connection") {

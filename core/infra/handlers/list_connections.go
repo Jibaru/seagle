@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-
 	"seagle/core/services"
 	"seagle/core/services/types"
 )
@@ -18,12 +16,12 @@ func NewListConnectionsHandler(connectionService *services.ConnectionService) *L
 }
 
 type ListConnectionsOutput struct {
-	Success     bool                        `json:"success"`
-	Message     string                      `json:"message"`
-	Connections []types.ConnectionSummary   `json:"connections"`
+	Success     bool                      `json:"success"`
+	Message     string                    `json:"message"`
+	Connections []types.ConnectionSummary `json:"connections"`
 }
 
-func (h *ListConnectionsHandler) ListConnections(ctx context.Context) (*ListConnectionsOutput, error) {
+func (h *ListConnectionsHandler) ListConnections() (*ListConnectionsOutput, error) {
 	connections, err := h.connectionService.ListConnections()
 	if err != nil {
 		return &ListConnectionsOutput{

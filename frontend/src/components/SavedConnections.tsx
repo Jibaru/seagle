@@ -1,0 +1,128 @@
+import { useEffect, useState } from "react";
+import { Database, Server, Loader2, AlertCircle } from "lucide-react";
+import type React from "react";
+import { Button } from "./ui/button";
+import { ListConnections } from "../../wailsjs/go/handlers/ListConnectionsHandler";
+import type { types } from "../../wailsjs/go/models";
+
+interface SavedConnectionsProps {
+	onConnectToSaved?: (connectionId: string) => void;
+}
+
+export const SavedConnections: React.FC<SavedConnectionsProps> = ({
+	onConnectToSaved,
+}) => {
+	const [connections, setConnections] = useState<types.ConnectionSummary[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		const loadConnections = async () => {
+			try {
+				setLoading(true);
+				setError(null);
+				const result = await ListConnections();
+				if (result.success) {
+					setConnections(result.connections || []);
+				} else {
+					setError(result.message || "Failed to load saved connections");
+				}
+			} catch (err) {
+				setError("Failed to load saved connections");
+				console.error("Error loading connections:", err);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		loadConnections();
+	}, []);
+
+	if (loading) {
+		return (
+			<div className="w-full max-w-4xl">
+				<div className="flex items-center justify-center p-8">
+					<Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+					<span className="ml-2 text-gray-600 dark:text-gray-400">
+						Loading saved connections...
+					</span>
+				</div>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="w-full max-w-4xl">
+				<div className="flex items-center justify-center p-8">
+					<AlertCircle className="h-6 w-6 text-red-500" />
+					<span className="ml-2 text-red-600 dark:text-red-400">{error}</span>
+				</div>
+			</div>
+		);
+	}
+
+	if (connections.length === 0) {
+		return (
+			<div className="w-full max-w-4xl">
+				<div className="text-center p-8">
+					<Database className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+					<p className="text-gray-600 dark:text-gray-400">
+						No saved connections found
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="w-full max-w-4xl">
+			<div className="mb-4">
+				<h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+					Recent Connections
+				</h2>
+				<p className="text-sm text-gray-600 dark:text-gray-400">
+					{connections.length} saved connection{connections.length !== 1 ? "s" : ""}
+				</p>
+			</div>
+
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				{connections.map((connection) => (
+					<div
+						key={connection.id}
+						className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow min-w-0"
+					>
+						<div className="flex items-start justify-between mb-3 min-w-0">
+							<div className="flex items-center min-w-0 flex-1 mr-2">
+								<Server className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+								<div className="min-w-0 flex-1">
+									<h3 className="text-sm font-medium text-gray-900 dark:text-white truncate" title={connection.host}>
+										{connection.host}
+									</h3>
+									<p className="text-xs text-gray-500 dark:text-gray-400">
+										Port {connection.port}
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<div className="flex items-center justify-between min-w-0 gap-2">
+							<div className="flex items-center text-xs text-gray-500 dark:text-gray-400 min-w-0 flex-1">
+								<span className="truncate" title={connection.id}>
+									{connection.id.substring(0, 8)}...
+								</span>
+							</div>
+							<Button
+								size="sm"
+								onClick={() => onConnectToSaved?.(connection.id)}
+								className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800 flex-shrink-0"
+							>
+								Connect
+							</Button>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+};

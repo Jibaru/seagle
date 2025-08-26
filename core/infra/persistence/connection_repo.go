@@ -52,7 +52,7 @@ func (r *ConnectionRepo) load() ([]*domain.Connection, error) {
 		return nil, err
 	}
 
-	var connections []*domain.Connection
+	connections := []*domain.Connection{}
 	if existingConnections, ok := data["connections"].([]interface{}); ok {
 		for _, conn := range existingConnections {
 			if connMap, ok := conn.(map[string]interface{}); ok {
