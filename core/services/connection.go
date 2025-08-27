@@ -304,6 +304,26 @@ func (cs *ConnectionService) GenerateQuery(id string, request types.GenerateQuer
 	}, nil
 }
 
+func (cs *ConnectionService) DeleteConnection(id string) error {
+	conn, err := cs.repo.FindByID(id)
+	if err != nil {
+		return fmt.Errorf("failed to find connection by ID: %w", err)
+	}
+	if conn == nil {
+		return fmt.Errorf("connection with ID %s not found", id)
+	}
+
+	if err := cs.repo.DeleteByID(id); err != nil {
+		return fmt.Errorf("failed to delete connection: %w", err)
+	}
+
+	if err := cs.metadataRepo.Delete(id); err != nil {
+		return fmt.Errorf("failed to delete connection metadata: %w", err)
+	}
+
+	return nil
+}
+
 // Helper function to convert types.DatabaseConfig to domain.Connection
 func (cs *ConnectionService) configToDomainConnection(id string, config types.DatabaseConfig) (*domain.Connection, error) {
 	if config.UseConnectionString && config.ConnectionString != "" {

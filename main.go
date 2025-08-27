@@ -43,6 +43,7 @@ func main() {
 	genQueryHnd := handlers.NewGenQueryHandler(connectionService)
 	setConfigHnd := handlers.NewSetConfigHandler(configService)
 	getConfigHnd := handlers.NewGetConfigHandler(configService)
+	deleteConnectionHnd := handlers.NewDeleteConnectionHandler(connectionService)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -69,6 +70,7 @@ func main() {
 			genQueryHnd,
 			setConfigHnd,
 			getConfigHnd,
+			deleteConnectionHnd,
 		},
 	})
 

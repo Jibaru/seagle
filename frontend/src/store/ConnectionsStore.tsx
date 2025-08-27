@@ -1,7 +1,8 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useReducer } from "react";
 import { ListConnections } from "../../wailsjs/go/handlers/ListConnectionsHandler";
-import type { types } from "../../wailsjs/go/models";
+import { DeleteConnection } from "../../wailsjs/go/handlers/DeleteConnectionHandler";
+import { types, handlers } from "../../wailsjs/go/models";
 
 interface ConnectionsState {
 	connections: types.ConnectionSummary[];
@@ -9,6 +10,7 @@ interface ConnectionsState {
 	error: string | null;
 	lastLoaded: number | null;
 	connectingId: string | null;
+	deletingId: string | null;
 }
 
 type ConnectionsAction =
@@ -16,6 +18,7 @@ type ConnectionsAction =
 	| { type: "SET_ERROR"; payload: string | null }
 	| { type: "SET_CONNECTIONS"; payload: types.ConnectionSummary[] }
 	| { type: "SET_CONNECTING_ID"; payload: string | null }
+	| { type: "SET_DELETING_ID"; payload: string | null }
 	| { type: "REFRESH_CONNECTIONS" }
 	| { type: "RESET_STATE" };
 
@@ -25,6 +28,7 @@ const initialState: ConnectionsState = {
 	error: null,
 	lastLoaded: null,
 	connectingId: null,
+	deletingId: null,
 };
 
 function connectionsReducer(
@@ -60,6 +64,12 @@ function connectionsReducer(
 				connectingId: action.payload,
 			};
 
+		case "SET_DELETING_ID":
+			return {
+				...state,
+				deletingId: action.payload,
+			};
+
 		case "REFRESH_CONNECTIONS":
 			return {
 				...state,
@@ -79,6 +89,7 @@ interface ConnectionsContextValue {
 	state: ConnectionsState;
 	loadConnections: (force?: boolean) => Promise<void>;
 	setConnectingId: (id: string | null) => void;
+	deleteConnection: (id: string) => Promise<void>;
 	refreshConnections: () => Promise<void>;
 	resetState: () => void;
 }
@@ -140,6 +151,26 @@ export const ConnectionsProvider: React.FC<ConnectionsProviderProps> = ({
 		dispatch({ type: "SET_CONNECTING_ID", payload: id });
 	}, []);
 
+	const deleteConnection = useCallback(async (id: string) => {
+		try {
+			dispatch({ type: "SET_DELETING_ID", payload: id });
+			
+			const input = new handlers.DeleteConnectionInput({ id });
+			await DeleteConnection(input);
+			
+			// Refresh connections after successful deletion
+			await loadConnections(true);
+		} catch (err) {
+			dispatch({ 
+				type: "SET_ERROR", 
+				payload: "Failed to delete connection" 
+			});
+			console.error("Error deleting connection:", err);
+		} finally {
+			dispatch({ type: "SET_DELETING_ID", payload: null });
+		}
+	}, [loadConnections]);
+
 	const refreshConnections = useCallback(async () => {
 		dispatch({ type: "REFRESH_CONNECTIONS" });
 		await loadConnections(true);
@@ -153,6 +184,7 @@ export const ConnectionsProvider: React.FC<ConnectionsProviderProps> = ({
 		state,
 		loadConnections,
 		setConnectingId,
+		deleteConnection,
 		refreshConnections,
 		resetState,
 	};

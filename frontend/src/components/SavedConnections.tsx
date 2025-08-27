@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Database, Server, Loader2, AlertCircle } from "lucide-react";
+import { Database, Server, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import type React from "react";
 import { Button } from "./ui/button";
 import { useConnectionsStore } from "../store/ConnectionsStore";
@@ -11,8 +11,8 @@ interface SavedConnectionsProps {
 export const SavedConnections: React.FC<SavedConnectionsProps> = ({
 	onConnectToSaved,
 }) => {
-	const { state, loadConnections } = useConnectionsStore();
-	const { connections, loading, error, connectingId } = state;
+	const { state, loadConnections, deleteConnection } = useConnectionsStore();
+	const { connections, loading, error, connectingId, deletingId } = state;
 
 	useEffect(() => {
 		loadConnections();
@@ -92,21 +92,36 @@ export const SavedConnections: React.FC<SavedConnectionsProps> = ({
 									{connection.id.substring(0, 8)}...
 								</span>
 							</div>
-							<Button
-								size="sm"
-								onClick={() => onConnectToSaved?.(connection.id)}
-								disabled={connectingId === connection.id}
-								className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800 flex-shrink-0 disabled:opacity-50"
-							>
-								{connectingId === connection.id ? (
-									<>
-										<Loader2 className="h-3 w-3 animate-spin mr-1" />
-										Connecting...
-									</>
-								) : (
-									"Connect"
-								)}
-							</Button>
+							<div className="flex items-center gap-2">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => deleteConnection(connection.id)}
+									disabled={deletingId === connection.id || connectingId === connection.id}
+									className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 dark:border-red-800 flex-shrink-0 disabled:opacity-50"
+								>
+									{deletingId === connection.id ? (
+										<Loader2 className="h-3 w-3 animate-spin" />
+									) : (
+										<Trash2 className="h-3 w-3" />
+									)}
+								</Button>
+								<Button
+									size="sm"
+									onClick={() => onConnectToSaved?.(connection.id)}
+									disabled={connectingId === connection.id || deletingId === connection.id}
+									className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800 flex-shrink-0 disabled:opacity-50"
+								>
+									{connectingId === connection.id ? (
+										<>
+											<Loader2 className="h-3 w-3 animate-spin mr-1" />
+											Connecting...
+										</>
+									) : (
+										"Connect"
+									)}
+								</Button>
+							</div>
 						</div>
 					</div>
 				))}

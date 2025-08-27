@@ -61,6 +61,22 @@ func (r *ConnectionRepo) FindByID(id string) (*domain.Connection, error) {
 	return nil, nil
 }
 
+func (r *ConnectionRepo) DeleteByID(id string) error {
+	connections, err := r.load()
+	if err != nil {
+		return err
+	}
+
+	updatedConnections := []*domain.Connection{}
+	for _, conn := range connections {
+		if conn.ID() != id {
+			updatedConnections = append(updatedConnections, conn)
+		}
+	}
+
+	return saveDataToFile(r.filename, r.toDataMap(updatedConnections))
+}
+
 func (r *ConnectionRepo) load() ([]*domain.Connection, error) {
 	data, err := loadDataFromFile(r.filename)
 	if err != nil {
