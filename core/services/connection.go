@@ -293,7 +293,7 @@ func (cs *ConnectionService) GenerateQuery(id string, request types.GenerateQuer
 	}
 
 	// Use OpenAI to generate the query
-	generatedQuery, err := cs.openaiClient.GenerateQuery(request.Prompt, metadata)
+	generatedQuery, err := cs.openaiClient.GenerateQuery(request.Prompt, metadata, conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate query with AI: %w", err)
 	}
