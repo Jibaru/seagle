@@ -31,3 +31,26 @@ func (s *ConfigService) SetConfig(
 
 	return s.repo.Save(cfg)
 }
+
+func (s *ConfigService) GetConfig() (struct {
+	OpenAIAPIKey string
+}, error) {
+	cfg, err := s.repo.Find()
+	if err != nil {
+		return struct {
+			OpenAIAPIKey string
+		}{}, err
+	}
+
+	if cfg == nil {
+		return struct {
+			OpenAIAPIKey string
+		}{}, nil
+	}
+
+	return struct {
+		OpenAIAPIKey string
+	}{
+		OpenAIAPIKey: cfg.OpenAIAPIKey(),
+	}, nil
+}

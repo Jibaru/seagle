@@ -50,6 +50,7 @@ func main() {
 	analyzeMetadataHnd := handlers.NewAnalyzeMetadataHandler(connectionService)
 	genQueryHnd := handlers.NewGenQueryHandler(connectionService)
 	setConfigHnd := handlers.NewSetConfigHandler(configService)
+	getConfigHnd := handlers.NewGetConfigHandler(configService)
 
 	// Create application with options
 	err = wails.Run(&options.App{
@@ -75,6 +76,7 @@ func main() {
 			analyzeMetadataHnd,
 			genQueryHnd,
 			setConfigHnd,
+			getConfigHnd,
 		},
 	})
 
