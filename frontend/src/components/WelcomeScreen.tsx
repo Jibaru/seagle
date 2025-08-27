@@ -1,4 +1,4 @@
-import { Bird, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { Button } from "./ui/button";
@@ -34,7 +34,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 				{/* Welcome Header */}
 				<div className="text-center mb-12">
 					<div className="mb-6 flex justify-center">
-						<Bird className="h-24 w-24 text-blue-500 dark:text-blue-400" />
+						<img 
+							src="/src/assets/images/logo.png" 
+							alt="Seagle Logo" 
+							className="h-[170px] w-[170px]" 
+						/>
 					</div>
 
 					<div className="space-y-4 mb-8">
@@ -46,7 +50,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
 					<div className="space-y-4">
 						<p className="text-gray-600 dark:text-gray-400">
-							Connect to your PostgreSQL database to get started
+							Connect to your database to get started
 						</p>
 
 						<Button
