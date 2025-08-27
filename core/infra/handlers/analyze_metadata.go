@@ -4,6 +4,11 @@ import (
 	"seagle/core/services"
 )
 
+// AnalyzeMetadataInput represents the input for the AnalyzeMetadata handler
+type AnalyzeMetadataInput struct {
+	ID string `json:"id"`
+}
+
 // AnalyzeMetadataOutput represents the output for the AnalyzeMetadata handler
 type AnalyzeMetadataOutput struct {
 	Success bool   `json:"success"`
@@ -23,8 +28,8 @@ func NewAnalyzeMetadataHandler(connectionService *services.ConnectionService) *A
 }
 
 // AnalyzeMetadata processes the metadata analysis request
-func (h *AnalyzeMetadataHandler) AnalyzeMetadata() (*AnalyzeMetadataOutput, error) {
-	err := h.connectionService.AnalyzeConnectionMetadata()
+func (h *AnalyzeMetadataHandler) AnalyzeMetadata(input AnalyzeMetadataInput) (*AnalyzeMetadataOutput, error) {
+	err := h.connectionService.AnalyzeConnectionMetadata(input.ID)
 	if err != nil {
 		return &AnalyzeMetadataOutput{
 			Success: false,

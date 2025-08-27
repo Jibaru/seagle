@@ -5,38 +5,33 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
 )
 
-var driversByVendor = map[string]string{
-	"postgresql": "postgres",
-}
-
-type ConnectionService struct {
+type MySQLService struct {
 	pool map[string]*sql.DB
 }
 
-func NewConnectionService() *ConnectionService {
-	return &ConnectionService{
+func NewMySQLService() *MySQLService {
+	return &MySQLService{
 		pool: make(map[string]*sql.DB),
 	}
 }
 
-func (s *ConnectionService) pooledDBConn(c *Connection) *sql.DB {
+func (s *MySQLService) pooledDBConn(c *Connection) *sql.DB {
 	if db, exists := s.pool[c.ID()]; exists {
 		return db
 	}
 	return nil
 }
 
-func (s *ConnectionService) Connect(c *Connection) error {
+func (s *MySQLService) Connect(c *Connection) error {
 	dbConn := s.pooledDBConn(c)
 	if dbConn == nil {
-		db, err := sql.Open(driversByVendor[c.Vendor()], c.connectionString())
+		db, err := sql.Open("mysql", s.buildConnectionString(c))
 		if err != nil {
 			return fmt.Errorf("failed to open database connection: %w", err)
 		}
-
 		dbConn = db
 	}
 
@@ -46,11 +41,10 @@ func (s *ConnectionService) Connect(c *Connection) error {
 	}
 
 	s.pool[c.ID()] = dbConn
-
 	return nil
 }
 
-func (s *ConnectionService) Disconnect(c *Connection) error {
+func (s *MySQLService) Disconnect(c *Connection) error {
 	dbConn := s.pooledDBConn(c)
 
 	if dbConn != nil {
@@ -62,13 +56,27 @@ func (s *ConnectionService) Disconnect(c *Connection) error {
 	return nil
 }
 
-func (s *ConnectionService) GetDatabaseNames(c *Connection) ([]string, error) {
-	query := `
-		SELECT datname 
-		FROM pg_database 
-		WHERE datistemplate = false
-		ORDER BY datname
-	`
+func (s *MySQLService) buildConnectionString(c *Connection) string {
+	// MySQL connection string format: user:password@tcp(host:port)/database?params
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c.username, c.password, c.Host(), c.Port(), c.database)
+	
+	if len(c.arguments) > 0 {
+		connStr += "?"
+		first := true
+		for k, v := range c.arguments {
+			if !first {
+				connStr += "&"
+			}
+			connStr += fmt.Sprintf("%s=%s", k, v)
+			first = false
+		}
+	}
+	
+	return connStr
+}
+
+func (s *MySQLService) GetDatabaseNames(c *Connection) ([]string, error) {
+	query := `SHOW DATABASES`
 
 	dbConn := s.pooledDBConn(c)
 	if dbConn == nil {
@@ -87,7 +95,10 @@ func (s *ConnectionService) GetDatabaseNames(c *Connection) ([]string, error) {
 		if err := rows.Scan(&dbName); err != nil {
 			return nil, fmt.Errorf("failed to scan database name: %w", err)
 		}
-		databases = append(databases, dbName)
+		// Filter out MySQL system databases
+		if dbName != "information_schema" && dbName != "mysql" && dbName != "performance_schema" && dbName != "sys" {
+			databases = append(databases, dbName)
+		}
 	}
 
 	if err := rows.Err(); err != nil {
@@ -97,11 +108,11 @@ func (s *ConnectionService) GetDatabaseNames(c *Connection) ([]string, error) {
 	return databases, nil
 }
 
-func (s *ConnectionService) GetTableNames(c *Connection, databaseName string) ([]string, error) {
+func (s *MySQLService) GetTableNames(c *Connection, databaseName string) ([]string, error) {
 	query := `
 		SELECT table_name 
 		FROM information_schema.tables 
-		WHERE table_schema = 'public' 
+		WHERE table_schema = ? 
 		AND table_type = 'BASE TABLE'
 		ORDER BY table_name
 	`
@@ -111,7 +122,7 @@ func (s *ConnectionService) GetTableNames(c *Connection, databaseName string) ([
 		return nil, fmt.Errorf("no active connection found")
 	}
 
-	rows, err := dbConn.Query(query)
+	rows, err := dbConn.Query(query, databaseName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tables for database %s: %w", databaseName, err)
 	}
@@ -133,12 +144,11 @@ func (s *ConnectionService) GetTableNames(c *Connection, databaseName string) ([
 	return tables, nil
 }
 
-func (s *ConnectionService) GetTableColumns(c *Connection, databaseName, tableName string) ([]ColumnMetadata, error) {
+func (s *MySQLService) GetTableColumns(c *Connection, databaseName, tableName string) ([]ColumnMetadata, error) {
 	query := `
 		SELECT column_name, data_type, is_nullable, column_default, ordinal_position
 		FROM information_schema.columns
-		WHERE table_schema = 'public' AND
-		table_name = $1
+		WHERE table_schema = ? AND table_name = ?
 		ORDER BY ordinal_position		
 	`
 	dbConn := s.pooledDBConn(c)
@@ -146,7 +156,7 @@ func (s *ConnectionService) GetTableColumns(c *Connection, databaseName, tableNa
 		return nil, fmt.Errorf("no active connection found")
 	}
 
-	rows, err := dbConn.Query(query, tableName)
+	rows, err := dbConn.Query(query, databaseName, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query columns for table %s: %w", tableName, err)
 	}
@@ -184,19 +194,7 @@ func (s *ConnectionService) GetTableColumns(c *Connection, databaseName, tableNa
 	return columns, nil
 }
 
-func (s *ConnectionService) ExecQuery(c *Connection, query string) (*struct {
-	Columns      []string
-	Rows         [][]interface{}
-	RowsAffected int64
-	Duration     int64
-}, error) {
-	type QueryResult = struct {
-		Columns      []string
-		Rows         [][]interface{}
-		RowsAffected int64
-		Duration     int64
-	}
-
+func (s *MySQLService) ExecQuery(c *Connection, query string) (*QueryResult, error) {
 	dbConn := s.pooledDBConn(c)
 	if dbConn == nil {
 		return nil, fmt.Errorf("no active connection found")
@@ -274,7 +272,7 @@ func (s *ConnectionService) ExecQuery(c *Connection, query string) (*struct {
 	}, nil
 }
 
-func (s *ConnectionService) GetTableMetadata(c *Connection, tableName, schemaName string) (*TableMetadata, error) {
+func (s *MySQLService) GetTableMetadata(c *Connection, tableName, schemaName string) (*TableMetadata, error) {
 	db := s.pooledDBConn(c)
 	if db == nil {
 		return nil, fmt.Errorf("no active connection found")
@@ -290,8 +288,8 @@ func (s *ConnectionService) GetTableMetadata(c *Connection, tableName, schemaNam
 			COALESCE(column_default, '') as column_default,
 			ordinal_position
 		FROM information_schema.columns 
-		WHERE table_schema = $1 
-		AND table_name = $2
+		WHERE table_schema = ? 
+		AND table_name = ?
 		ORDER BY ordinal_position
 	`
 

@@ -3,6 +3,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { GenerateQuery } from "../../wailsjs/go/handlers/GenQueryHandler";
+import { useActiveConnectionStore } from "../store/ActiveConnectionStore";
 
 interface SqlEditorProps {
 	value: string;
@@ -21,6 +22,7 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 	isExecuting = false,
 	database,
 }) => {
+	const { state: activeConnection } = useActiveConnectionStore();
 	const [selectedText, setSelectedText] = useState("");
 	const [isGenerating, setIsGenerating] = useState(false);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -59,9 +61,15 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
 			return;
 		}
 
+		if (!activeConnection.connectionId) {
+			alert("No active connection available");
+			return;
+		}
+
 		setIsGenerating(true);
 		try {
 			const response = await GenerateQuery({
+				id: activeConnection.connectionId,
 				database: database,
 				prompt: prompt,
 			});

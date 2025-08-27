@@ -28,8 +28,8 @@ func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	domainConnectionService := domain.NewConnectionService()
-	metadataFactory := domain.NewMetadataFactory(domainConnectionService)
+	serviceFactory := domain.NewServiceFactory()
+	metadataFactory := domain.NewMetadataFactory(serviceFactory)
 
 	connectionRepo := persistence.NewConnection(persistence.FileAtHomeDir(".seagle", "data", "connections.json"))
 	metadataRepo := persistence.NewMetadataRepository(persistence.FileAtHomeDir(".seagle", "data", "metadata.json"))
@@ -38,7 +38,7 @@ func main() {
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
 	openaiClient := services.NewOpenAIClient(openaiAPIKey)
 
-	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, domainConnectionService, metadataFactory, openaiClient)
+	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, serviceFactory, metadataFactory, openaiClient)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)

@@ -22,6 +22,7 @@ type ConnectOutput struct {
 	Success   bool     `json:"success"`
 	Message   string   `json:"message,omitempty"`
 	Databases []string `json:"databases,omitempty"`
+	ID        string   `json:"id"`
 }
 
 // ConnectHandler handles database connection requests
@@ -38,7 +39,7 @@ func NewConnectHandler(connectionService *services.ConnectionService) *ConnectHa
 
 // Connect processes the connection request
 func (h *ConnectHandler) Connect(input ConnectInput) (*ConnectOutput, error) {
-	_, err := h.connectionService.Connect(types.DatabaseConfig{
+	res, err := h.connectionService.Connect(types.DatabaseConfig{
 		Host:                input.Host,
 		Port:                input.Port,
 		Database:            input.Database,
@@ -56,7 +57,7 @@ func (h *ConnectHandler) Connect(input ConnectInput) (*ConnectOutput, error) {
 	}
 
 	// Fetch databases after successful connection
-	databases, err := h.connectionService.GetDatabases()
+	databases, err := h.connectionService.GetDatabases(res.ID)
 	if err != nil {
 		// Connection succeeded but database fetching failed - still return success
 		return &ConnectOutput{
@@ -69,5 +70,6 @@ func (h *ConnectHandler) Connect(input ConnectInput) (*ConnectOutput, error) {
 		Success:   true,
 		Message:   "Connected successfully",
 		Databases: databases,
+		ID:        res.ID,
 	}, nil
 }

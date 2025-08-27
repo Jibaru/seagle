@@ -7,15 +7,16 @@ import (
 
 // ExecuteQueryInput represents the input for the ExecuteQuery handler
 type ExecuteQueryInput struct {
+	ID       string `json:"id"`
 	Database string `json:"database"`
 	Query    string `json:"query"`
 }
 
 // ExecuteQueryOutput represents the output for the ExecuteQuery handler
 type ExecuteQueryOutput struct {
-	Success bool                `json:"success"`
-	Message string              `json:"message,omitempty"`
-	Result  *types.QueryResult  `json:"result,omitempty"`
+	Success bool               `json:"success"`
+	Message string             `json:"message,omitempty"`
+	Result  *types.QueryResult `json:"result,omitempty"`
 }
 
 // ExecuteQueryHandler handles query execution requests
@@ -39,7 +40,7 @@ func (h *ExecuteQueryHandler) ExecuteQuery(input ExecuteQueryInput) (*ExecuteQue
 		}, nil
 	}
 
-	result, err := h.connectionService.ExecuteQuery(input.Database, input.Query)
+	result, err := h.connectionService.ExecuteQuery(input.ID, input.Database, input.Query)
 	if err != nil {
 		return &ExecuteQueryOutput{
 			Success: false,

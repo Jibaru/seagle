@@ -5,23 +5,28 @@ import (
 )
 
 type MetadataFactory struct {
-	connectionService *ConnectionService
+	serviceFactory *ServiceFactory
 }
 
-func NewMetadataFactory(connectionService *ConnectionService) *MetadataFactory {
-	return &MetadataFactory{connectionService: connectionService}
+func NewMetadataFactory(serviceFactory *ServiceFactory) *MetadataFactory {
+	return &MetadataFactory{serviceFactory: serviceFactory}
 }
 
 func (s *MetadataFactory) NewConnectionMetadata(conn *Connection) (*ConnectionMetadata, error) {
-	if err := s.connectionService.Connect(conn); err != nil {
+	dbService, err := s.serviceFactory.NewDatabaseService(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database service: %w", err)
+	}
+
+	if err := dbService.Connect(conn); err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer s.connectionService.Disconnect(conn)
+	defer dbService.Disconnect(conn)
 
 	metadata := NewConnectionMetadata(conn.ID(), conn.Host(), conn.Port())
 
 	// Get all databases
-	databases, err := s.connectionService.GetDatabaseNames(conn)
+	databases, err := dbService.GetDatabaseNames(conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database list: %w", err)
 	}
@@ -43,22 +48,27 @@ func (s *MetadataFactory) NewConnectionMetadata(conn *Connection) (*ConnectionMe
 func (s *MetadataFactory) analyzeDatabaseMetadata(conn *Connection, databaseName string) (*DatabaseMetadata, error) {
 	// Create a connection copy for the specific database
 	cpy := CopyConnection(conn, databaseName)
-	if err := s.connectionService.Connect(cpy); err != nil {
+	dbService, err := s.serviceFactory.NewDatabaseService(cpy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database service: %w", err)
+	}
+
+	if err := dbService.Connect(cpy); err != nil {
 		return nil, fmt.Errorf("failed to connect to database %s: %w", databaseName, err)
 	}
-	defer s.connectionService.Disconnect(cpy)
+	defer dbService.Disconnect(cpy)
 
 	metadata := NewDatabaseMetadata(databaseName)
 
 	// Get all tables in the database
-	tables, err := s.getTableList(cpy)
+	tables, err := s.getTableList(cpy, dbService)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get table list for database %s: %w", databaseName, err)
 	}
 
 	// Analyze each table
 	for _, tableInfo := range tables {
-		tableMetadata, err := s.connectionService.GetTableMetadata(cpy, tableInfo.Name, tableInfo.Schema)
+		tableMetadata, err := dbService.GetTableMetadata(cpy, tableInfo.Name, tableInfo.Schema)
 		if err != nil {
 			// Log error but continue with other tables
 			continue
@@ -76,16 +86,30 @@ type TableInfo struct {
 }
 
 // getTableList retrieves all tables in a database
-func (s *MetadataFactory) getTableList(conn *Connection) ([]TableInfo, error) {
-	query := `
-		SELECT table_name, table_schema
-		FROM information_schema.tables 
-		WHERE table_schema = 'public' 
-		AND table_type = 'BASE TABLE'
-		ORDER BY table_name
-	`
+func (s *MetadataFactory) getTableList(conn *Connection, dbService DatabaseService) ([]TableInfo, error) {
+	var query string
+	switch conn.Vendor() {
+	case "postgresql":
+		query = `
+			SELECT table_name, table_schema
+			FROM information_schema.tables 
+			WHERE table_schema = 'public' 
+			AND table_type = 'BASE TABLE'
+			ORDER BY table_name
+		`
+	case "mysql":
+		query = `
+			SELECT table_name, table_schema
+			FROM information_schema.tables 
+			WHERE table_schema = ? 
+			AND table_type = 'BASE TABLE'
+			ORDER BY table_name
+		`
+	default:
+		return nil, fmt.Errorf("unsupported vendor: %s", conn.Vendor())
+	}
 
-	data, err := s.connectionService.ExecQuery(conn, query)
+	data, err := dbService.ExecQuery(conn, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tables: %w", err)
 	}

@@ -6,6 +6,7 @@ import { Button } from "./components/ui/button";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DatabaseProvider, useDatabaseStore } from "./store/DatabaseStore";
 import { ConnectionsProvider, useConnectionsStore } from "./store/ConnectionsStore";
+import { ActiveConnectionProvider, useActiveConnectionStore } from "./store/ActiveConnectionStore";
 import { ConnectByID } from "../wailsjs/go/handlers/ConnectByIDHandler";
 import "./App.css";
 
@@ -13,9 +14,9 @@ function AppContent() {
 	const [currentScreen, setCurrentScreen] = useState<
 		"welcome" | "connection" | "connected"
 	>("welcome");
-	const [isConnected, setIsConnected] = useState(false);
 	const { setDatabases, resetState } = useDatabaseStore();
 	const { setConnectingId, refreshConnections } = useConnectionsStore();
+	const { state: activeConnection, setConnection, clearConnection } = useActiveConnectionStore();
 
 	const handleNewConnection = () => {
 		setCurrentScreen("connection");
@@ -27,8 +28,8 @@ function AppContent() {
 			const result = await ConnectByID({ id: connectionId });
 			
 			if (result.success) {
-				setIsConnected(true);
 				setCurrentScreen("connected");
+				setConnection(connectionId); // Store the connection ID globally
 				if (result.databases) {
 					setDatabases(result.databases);
 				}
@@ -49,23 +50,25 @@ function AppContent() {
 	const handleConnectionChange = (
 		connected: boolean,
 		databaseList?: string[],
+		connectionId?: string,
 	) => {
-		setIsConnected(connected);
-		if (connected) {
+		if (connected && connectionId) {
 			setCurrentScreen("connected");
+			setConnection(connectionId); // Store the connection ID globally
 			if (databaseList) {
 				setDatabases(databaseList);
 			}
 			// Refresh connections list after successful connection
 			refreshConnections();
 		} else {
+			clearConnection(); // Clear the global connection state
 			resetState();
 		}
 	};
 
 	const handleBackToWelcome = () => {
 		setCurrentScreen("welcome");
-		setIsConnected(false);
+		clearConnection(); // Clear the global connection state
 		resetState();
 	};
 
@@ -107,11 +110,13 @@ function AppContent() {
 function App() {
 	return (
 		<ThemeProvider>
-			<ConnectionsProvider>
-				<DatabaseProvider>
-					<AppContent />
-				</DatabaseProvider>
-			</ConnectionsProvider>
+			<ActiveConnectionProvider>
+				<ConnectionsProvider>
+					<DatabaseProvider>
+						<AppContent />
+					</DatabaseProvider>
+				</ConnectionsProvider>
+			</ActiveConnectionProvider>
 		</ThemeProvider>
 	);
 }

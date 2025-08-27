@@ -7,6 +7,7 @@ import (
 
 // GenerateQueryInput represents the input for the GenerateQuery handler
 type GenerateQueryInput struct {
+	ID       string `json:"id"`
 	Database string `json:"database"`
 	Prompt   string `json:"prompt"`
 }
@@ -51,7 +52,7 @@ func (h *GenQueryHandler) GenerateQuery(input GenerateQueryInput) (*GenerateQuer
 		Prompt:   input.Prompt,
 	}
 
-	result, err := h.connectionService.GenerateQuery(request)
+	result, err := h.connectionService.GenerateQuery(input.ID, request)
 	if err != nil {
 		return &GenerateQueryOutput{
 			Success: false,

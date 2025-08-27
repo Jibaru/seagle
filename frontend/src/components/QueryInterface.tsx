@@ -1,6 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { ExecuteQuery } from "../../wailsjs/go/handlers/ExecuteQueryHandler";
+import { useActiveConnectionStore } from "../store/ActiveConnectionStore";
 import { QueryResults } from "./QueryResults";
 import { SqlEditor } from "./SqlEditor";
 
@@ -17,6 +18,7 @@ interface QueryInterfaceProps {
 }
 
 export const QueryInterface: React.FC<QueryInterfaceProps> = ({ database }) => {
+	const { state: activeConnection } = useActiveConnectionStore();
 	const [query, setQuery] = useState("");
 	const [result, setResult] = useState<QueryResult>();
 	const [error, setError] = useState<string>();
@@ -26,6 +28,11 @@ export const QueryInterface: React.FC<QueryInterfaceProps> = ({ database }) => {
 	const handleExecuteQuery = async (queryToExecute: string) => {
 		if (!queryToExecute.trim()) return;
 
+		if (!activeConnection.connectionId) {
+			setError("No active connection available");
+			return;
+		}
+
 		setIsExecuting(true);
 		setError(undefined);
 		setResult(undefined);
@@ -33,6 +40,7 @@ export const QueryInterface: React.FC<QueryInterfaceProps> = ({ database }) => {
 
 		try {
 			const response = await ExecuteQuery({
+				id: activeConnection.connectionId,
 				database,
 				query: queryToExecute,
 			});

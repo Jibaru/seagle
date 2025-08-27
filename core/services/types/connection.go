@@ -15,6 +15,7 @@ type DatabaseConfig struct {
 
 // DatabaseConnection represents a database connection
 type DatabaseConnection struct {
+	ID          string         `json:"id"`
 	Config      DatabaseConfig `json:"config"`
 	IsConnected bool           `json:"isConnected"`
 }

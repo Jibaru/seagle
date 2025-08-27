@@ -2,6 +2,7 @@ import type React from "react";
 import { createContext, useCallback, useContext, useReducer } from "react";
 import { GetTableColumns } from "../../wailsjs/go/handlers/GetTableColumnsHandler";
 import { GetTables } from "../../wailsjs/go/handlers/GetTablesHandler";
+import { useActiveConnectionStore } from "./ActiveConnectionStore";
 
 interface TableColumn {
 	name: string;
@@ -187,6 +188,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 	children,
 }) => {
 	const [state, dispatch] = useReducer(databaseReducer, initialState);
+	const { state: activeConnection } = useActiveConnectionStore();
 
 	const setDatabases = useCallback((databases: string[]) => {
 		dispatch({ type: "SET_DATABASES", payload: databases });
@@ -202,6 +204,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 
 	const toggleDatabase = useCallback(
 		async (database: string) => {
+			if (!activeConnection.connectionId) {
+				console.error("No active connection ID available for fetching tables");
+				return;
+			}
+
 			dispatch({ type: "TOGGLE_DATABASE", payload: database });
 
 			// If expanding and tables not loaded, fetch them
@@ -214,7 +221,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 					payload: { database, loading: true },
 				});
 				try {
-					const result = await GetTables({ database });
+					const result = await GetTables({ 
+						id: activeConnection.connectionId,
+						database 
+					});
 					const tables = result?.success && result?.tables ? result.tables : [];
 					dispatch({
 						type: "SET_DATABASE_TABLES",
@@ -234,11 +244,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 				}
 			}
 		},
-		[state.expandedDatabases, state.databaseTables],
+		[state.expandedDatabases, state.databaseTables, activeConnection.connectionId],
 	);
 
 	const toggleTable = useCallback(
 		async (database: string, table: string) => {
+			if (!activeConnection.connectionId) {
+				console.error("No active connection ID available for fetching columns");
+				return;
+			}
+
 			const tableKey = `${database}.${table}`;
 			dispatch({ type: "TOGGLE_TABLE", payload: { database, table } });
 
@@ -252,7 +267,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 					payload: { database, table, loading: true },
 				});
 				try {
-					const result = await GetTableColumns({ database, table });
+					const result = await GetTableColumns({ 
+						id: activeConnection.connectionId,
+						database, 
+						table 
+					});
 					const columns =
 						result?.success && result?.columns ? result.columns : [];
 					dispatch({
@@ -276,7 +295,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
 				}
 			}
 		},
-		[state.expandedTables, state.tableColumns],
+		[state.expandedTables, state.tableColumns, activeConnection.connectionId],
 	);
 
 	const resetState = useCallback(() => {

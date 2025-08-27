@@ -41,7 +41,7 @@ func (h *ConnectByIDHandler) ConnectByID(input ConnectByIDInput) (*ConnectByIDOu
 	}
 
 	// Get list of databases after successful connection
-	databases, err := h.connectionService.GetDatabases()
+	databases, err := h.connectionService.GetDatabases(input.ID)
 	if err != nil {
 		return &ConnectByIDOutput{
 			Success: false,

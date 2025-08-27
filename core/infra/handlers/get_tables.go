@@ -6,6 +6,7 @@ import (
 
 // GetTablesInput represents the input for the GetTables handler
 type GetTablesInput struct {
+	ID       string `json:"id"`
 	Database string `json:"database"`
 }
 
@@ -30,7 +31,7 @@ func NewGetTablesHandler(connectionService *services.ConnectionService) *GetTabl
 
 // GetTables processes the table listing request
 func (h *GetTablesHandler) GetTables(input GetTablesInput) (*GetTablesOutput, error) {
-	tables, err := h.connectionService.GetTables(input.Database)
+	tables, err := h.connectionService.GetTables(input.ID, input.Database)
 	if err != nil {
 		return &GetTablesOutput{
 			Success: false,

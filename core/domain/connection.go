@@ -9,6 +9,7 @@ import (
 
 var supportedVendors = map[string]bool{
 	"postgresql": true,
+	"mysql":      true,
 }
 
 type Connection struct {
@@ -55,13 +56,23 @@ func CopyConnection(conn *Connection, database string) *Connection {
 func NewConnectionFromString(id, connStr string) (*Connection, error) {
 	arguments := make(map[string]string)
 
-	// Parse PostgreSQL URI format: postgresql://username:password@host:port/database?param=value
+	// Parse URI format: scheme://username:password@host:port/database?param=value
 	parsedURL, err := url.Parse(connStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid connection string format: %v", err)
 	}
 
-	if parsedURL.Scheme != "postgresql" && parsedURL.Scheme != "postgres" {
+	var vendor string
+	var defaultPort int
+
+	switch parsedURL.Scheme {
+	case "postgresql", "postgres":
+		vendor = "postgresql"
+		defaultPort = 5432
+	case "mysql":
+		vendor = "mysql"
+		defaultPort = 3306
+	default:
 		return nil, fmt.Errorf("unsupported scheme: %s", parsedURL.Scheme)
 	}
 
@@ -71,7 +82,7 @@ func NewConnectionFromString(id, connStr string) (*Connection, error) {
 		return nil, fmt.Errorf("host is required in connection string")
 	}
 
-	port := 5432 // default PostgreSQL port
+	port := defaultPort
 	if parsedURL.Port() != "" {
 		if p, err := strconv.Atoi(parsedURL.Port()); err == nil {
 			port = p
@@ -104,7 +115,7 @@ func NewConnectionFromString(id, connStr string) (*Connection, error) {
 		}
 	}
 
-	return NewConnection(id, "postgresql", host, port, database, username, password, arguments)
+	return NewConnection(id, vendor, host, port, database, username, password, arguments)
 }
 
 func NewConnectionFromMap(data map[string]interface{}) *Connection {
@@ -159,15 +170,28 @@ func (c *Connection) Map() map[string]interface{} {
 }
 
 func (c *Connection) connectionString() string {
-	dbURL := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", url.QueryEscape(c.username), url.QueryEscape(c.password), c.host, c.port, c.database)
-
-	if len(c.arguments) > 0 {
-		args := make([]string, 0, len(c.arguments))
-		for k, v := range c.arguments {
-			args = append(args, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+	switch c.vendor {
+	case "postgresql":
+		dbURL := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", url.QueryEscape(c.username), url.QueryEscape(c.password), c.host, c.port, c.database)
+		if len(c.arguments) > 0 {
+			args := make([]string, 0, len(c.arguments))
+			for k, v := range c.arguments {
+				args = append(args, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+			}
+			dbURL += "?" + strings.Join(args, "&")
 		}
-		dbURL += "?" + strings.Join(args, "&")
+		return dbURL
+	case "mysql":
+		dbURL := fmt.Sprintf("mysql://%s:%s@%s:%d/%s", url.QueryEscape(c.username), url.QueryEscape(c.password), c.host, c.port, c.database)
+		if len(c.arguments) > 0 {
+			args := make([]string, 0, len(c.arguments))
+			for k, v := range c.arguments {
+				args = append(args, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+			}
+			dbURL += "?" + strings.Join(args, "&")
+		}
+		return dbURL
+	default:
+		return ""
 	}
-
-	return dbURL
 }

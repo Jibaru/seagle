@@ -1,5 +1,17 @@
 export namespace handlers {
 	
+	export class AnalyzeMetadataInput {
+	    id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalyzeMetadataInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	    }
+	}
 	export class AnalyzeMetadataOutput {
 	    success: boolean;
 	    message?: string;
@@ -72,6 +84,7 @@ export namespace handlers {
 	    success: boolean;
 	    message?: string;
 	    databases?: string[];
+	    id: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConnectOutput(source);
@@ -82,9 +95,23 @@ export namespace handlers {
 	        this.success = source["success"];
 	        this.message = source["message"];
 	        this.databases = source["databases"];
+	        this.id = source["id"];
+	    }
+	}
+	export class DisconnectInput {
+	    id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DisconnectInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	    }
 	}
 	export class ExecuteQueryInput {
+	    id: string;
 	    database: string;
 	    query: string;
 	
@@ -94,6 +121,7 @@ export namespace handlers {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.database = source["database"];
 	        this.query = source["query"];
 	    }
@@ -133,6 +161,7 @@ export namespace handlers {
 		}
 	}
 	export class GenerateQueryInput {
+	    id: string;
 	    database: string;
 	    prompt: string;
 	
@@ -142,6 +171,7 @@ export namespace handlers {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.database = source["database"];
 	        this.prompt = source["prompt"];
 	    }
@@ -181,6 +211,7 @@ export namespace handlers {
 		}
 	}
 	export class GetTableColumnsInput {
+	    id: string;
 	    database: string;
 	    table: string;
 	
@@ -190,6 +221,7 @@ export namespace handlers {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.database = source["database"];
 	        this.table = source["table"];
 	    }
@@ -229,6 +261,7 @@ export namespace handlers {
 		}
 	}
 	export class GetTablesInput {
+	    id: string;
 	    database: string;
 	
 	    static createFrom(source: any = {}) {
@@ -237,6 +270,7 @@ export namespace handlers {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.database = source["database"];
 	    }
 	}

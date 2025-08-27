@@ -7,6 +7,7 @@ import (
 
 // GetTableColumnsInput represents the input for the GetTableColumns handler
 type GetTableColumnsInput struct {
+	ID       string `json:"id"`
 	Database string `json:"database"`
 	Table    string `json:"table"`
 }
@@ -32,7 +33,7 @@ func NewGetTableColumnsHandler(connectionService *services.ConnectionService) *G
 
 // GetTableColumns processes the table column listing request
 func (h *GetTableColumnsHandler) GetTableColumns(input GetTableColumnsInput) (*GetTableColumnsOutput, error) {
-	columns, err := h.connectionService.GetTableColumns(input.Database, input.Table)
+	columns, err := h.connectionService.GetTableColumns(input.ID, input.Database, input.Table)
 	if err != nil {
 		return &GetTableColumnsOutput{
 			Success: false,

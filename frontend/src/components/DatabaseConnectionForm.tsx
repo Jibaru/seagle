@@ -8,11 +8,11 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
 interface DatabaseConnectionFormProps {
-	onConnectionChange: (connected: boolean, databases?: string[]) => void;
+	onConnectionChange: (connected: boolean, databases?: string[], connectionId?: string) => void;
 }
 
 interface DatabaseConfig {
-	vendor: "postgresql";
+	vendor: "postgresql" | "mysql";
 	host: string;
 	port: number;
 	database: string;
@@ -40,15 +40,26 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 	const [loading, setLoading] = useState(false);
 	const [connected, setConnected] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [connectionId, setConnectionId] = useState<string | null>(null);
 
 	const handleInputChange = (
 		field: keyof DatabaseConfig,
 		value: string | number | boolean,
 	) => {
-		setConfig((prev) => ({
-			...prev,
-			[field]: value,
-		}));
+		setConfig((prev) => {
+			const newConfig = { ...prev, [field]: value };
+			
+			// Update default port when vendor changes
+			if (field === "vendor") {
+				if (value === "postgresql") {
+					newConfig.port = 5432;
+				} else if (value === "mysql") {
+					newConfig.port = 3306;
+				}
+			}
+			
+			return newConfig;
+		});
 	};
 
 	const handleTestConnection = async () => {
@@ -73,13 +84,19 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 		try {
 			const result = await Connect(config);
 
-			setConnected(true);
-			onConnectionChange(true, result?.databases || []);
-			setError(null);
+			if (result?.success && result?.id) {
+				setConnected(true);
+				setConnectionId(result.id);
+				onConnectionChange(true, result?.databases || [], result.id);
+				setError(null);
 
-			// Log the databases received from the connection
-			if (result?.databases) {
-				console.log("Available databases:", result.databases);
+				// Log the databases received from the connection
+				if (result?.databases) {
+					console.log("Available databases:", result.databases);
+					console.log("Connection ID:", result.id);
+				}
+			} else {
+				setError(result?.message || "Connection failed");
 			}
 		} catch (err) {
 			setError(err as string);
@@ -89,11 +106,17 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 	};
 
 	const handleDisconnect = async () => {
+		if (!connectionId) {
+			setError("No active connection to disconnect");
+			return;
+		}
+
 		setLoading(true);
 
 		try {
-			await Disconnect();
+			await Disconnect({ id: connectionId });
 			setConnected(false);
+			setConnectionId(null);
 			onConnectionChange(false);
 			setError(null);
 		} catch (err) {
@@ -134,6 +157,22 @@ export const DatabaseConnectionForm: React.FC<DatabaseConnectionFormProps> = ({
 						<span className="text-gray-700 dark:text-gray-300">Connection String</span>
 					</label>
 				</div>
+			</div>
+
+			<div className="mb-6">
+				<Label htmlFor="vendor" className="text-gray-700 dark:text-gray-300">
+					Database Vendor
+				</Label>
+				<select
+					id="vendor"
+					value={config.vendor}
+					onChange={(e) => handleInputChange("vendor", e.target.value as "postgresql" | "mysql")}
+					disabled={connected || loading}
+					className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+				>
+					<option value="postgresql">PostgreSQL</option>
+					<option value="mysql">MySQL</option>
+				</select>
 			</div>
 
 			{error && (
