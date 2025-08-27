@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { SavedConnections } from "./SavedConnections";
 import { SettingsForm } from "./SettingsForm";
+import logoImage from "../assets/images/logo.png";
 
 interface WelcomeScreenProps {
 	onNewConnection: () => void;
@@ -35,7 +36,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 				<div className="text-center mb-12">
 					<div className="mb-6 flex justify-center">
 						<img 
-							src="/src/assets/images/logo.png" 
+							src={logoImage} 
 							alt="Seagle Logo" 
 							className="h-[170px] w-[170px]" 
 						/>
