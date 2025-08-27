@@ -1,8 +1,11 @@
 import type React from "react";
+import { useState } from "react";
+import { Settings } from "lucide-react";
 import { useDatabaseStore } from "../store/DatabaseStore";
 import { QueryInterface } from "./QueryInterface";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
+import { SettingsForm } from "./SettingsForm";
 import { Button } from "./ui/button";
 
 interface MainLayoutProps {
@@ -11,6 +14,7 @@ interface MainLayoutProps {
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ onNewConnection }) => {
 	const { state, selectDatabase, selectTable } = useDatabaseStore();
+	const [showSettings, setShowSettings] = useState(false);
 
 	return (
 		<div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -30,6 +34,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onNewConnection }) => {
 						</div>
 						<div className="flex items-center space-x-3">
 							<ThemeToggle />
+							<Button
+								onClick={() => setShowSettings(true)}
+								variant="outline"
+								size="sm"
+								className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+							>
+								<Settings className="h-4 w-4" />
+							</Button>
 							<Button
 								onClick={onNewConnection}
 								variant="outline"
@@ -77,6 +89,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onNewConnection }) => {
 					)}
 				</main>
 			</div>
+
+			{/* Settings Form Modal */}
+			<SettingsForm 
+				isOpen={showSettings}
+				onClose={() => setShowSettings(false)}
+			/>
 		</div>
 	);
 };

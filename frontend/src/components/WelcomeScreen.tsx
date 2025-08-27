@@ -1,7 +1,9 @@
-import { Bird } from "lucide-react";
+import { Bird, Settings } from "lucide-react";
 import type React from "react";
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { SavedConnections } from "./SavedConnections";
+import { SettingsForm } from "./SettingsForm";
 
 interface WelcomeScreenProps {
 	onNewConnection: () => void;
@@ -12,9 +14,23 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 	onNewConnection,
 	onConnectToSaved,
 }) => {
+	const [showSettings, setShowSettings] = useState(false);
+
 	return (
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center py-12">
 			<div className="w-full max-w-6xl px-4">
+				{/* Settings Button */}
+				<div className="absolute top-4 right-4">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setShowSettings(true)}
+						className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+					>
+						<Settings className="h-4 w-4" />
+					</Button>
+				</div>
+
 				{/* Welcome Header */}
 				<div className="text-center mb-12">
 					<div className="mb-6 flex justify-center">
@@ -50,6 +66,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 					/>
 				</div>
 			</div>
+
+			{/* Settings Form Modal */}
+			<SettingsForm 
+				isOpen={showSettings}
+				onClose={() => setShowSettings(false)}
+			/>
 		</div>
 	);
 };
