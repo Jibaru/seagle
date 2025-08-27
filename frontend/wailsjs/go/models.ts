@@ -26,6 +26,18 @@ export namespace handlers {
 	        this.message = source["message"];
 	    }
 	}
+	export class AppConfig {
+	    openAIAPIKey: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.openAIAPIKey = source["openAIAPIKey"];
+	    }
+	}
 	export class ConnectByIDInput {
 	    id: string;
 	
@@ -213,8 +225,7 @@ export namespace handlers {
 	export class GetConfigOutput {
 	    success: boolean;
 	    message: string;
-	    // Go type: struct { OpenAIAPIKey string "json:\"openAIAPIKey\"" }
-	    Config: any;
+	    config: AppConfig;
 	
 	    static createFrom(source: any = {}) {
 	        return new GetConfigOutput(source);
@@ -224,7 +235,7 @@ export namespace handlers {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
 	        this.message = source["message"];
-	        this.Config = this.convertValues(source["Config"], Object);
+	        this.config = this.convertValues(source["config"], AppConfig);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

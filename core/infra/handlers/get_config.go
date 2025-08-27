@@ -15,11 +15,13 @@ func NewGetConfigHandler(configService *services.ConfigService) *GetConfigHandle
 }
 
 type GetConfigOutput struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Config  struct {
-		OpenAIAPIKey string `json:"openAIAPIKey"`
-	}
+	Success bool      `json:"success"`
+	Message string    `json:"message"`
+	Config  AppConfig `json:"config"`
+}
+
+type AppConfig struct {
+	OpenAIAPIKey string `json:"openAIAPIKey"`
 }
 
 func (h *GetConfigHandler) GetConfig() (*GetConfigOutput, error) {
@@ -34,9 +36,7 @@ func (h *GetConfigHandler) GetConfig() (*GetConfigOutput, error) {
 	return &GetConfigOutput{
 		Success: true,
 		Message: "Configuration updated successfully",
-		Config: struct {
-			OpenAIAPIKey string `json:"openAIAPIKey"`
-		}{
+		Config: AppConfig{
 			OpenAIAPIKey: cfg.OpenAIAPIKey,
 		},
 	}, nil

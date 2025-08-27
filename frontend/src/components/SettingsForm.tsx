@@ -33,8 +33,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 		try {
 			setLoading(true);
 			const result = await GetConfig();
-			if (result.success && result.Config) {
-				const key = result.Config.openAIAPIKey || "";
+			if (result.success && result.config) {
+				const key = result.config.openAIAPIKey || "";
 				setOpenAIAPIKey(key);
 				setOriginalKey(key);
 			}
