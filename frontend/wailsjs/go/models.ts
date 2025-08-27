@@ -324,6 +324,32 @@ export namespace handlers {
 		    return a;
 		}
 	}
+	export class SetConfigInput {
+	    openAIAPIKey: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SetConfigInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.openAIAPIKey = source["openAIAPIKey"];
+	    }
+	}
+	export class SetConfigOutput {
+	    success: boolean;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SetConfigOutput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	    }
+	}
 	export class TestConnectionInput {
 	    host: string;
 	    port: number;

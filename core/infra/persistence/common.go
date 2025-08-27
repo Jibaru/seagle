@@ -22,7 +22,7 @@ func saveDataToFile(filename string, data map[string]interface{}) error {
 
 func loadDataFromFile(filename string) (map[string]interface{}, error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return map[string]interface{}{"connections": []interface{}{}}, nil
+		return map[string]interface{}{}, nil
 	}
 
 	fileData, err := os.ReadFile(filename)
@@ -31,7 +31,7 @@ func loadDataFromFile(filename string) (map[string]interface{}, error) {
 	}
 
 	if len(fileData) == 0 {
-		return map[string]interface{}{"connections": []interface{}{}}, nil
+		return map[string]interface{}{}, nil
 	}
 
 	var data map[string]interface{}

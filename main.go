@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
@@ -33,12 +32,12 @@ func main() {
 
 	connectionRepo := persistence.NewConnection(persistence.FileAtHomeDir(".seagle", "data", "connections.json"))
 	metadataRepo := persistence.NewMetadataRepository(persistence.FileAtHomeDir(".seagle", "data", "metadata.json"))
+	configRepo := persistence.NewConfigRepo(persistence.FileAtHomeDir(".seagle", "data", "config.json"))
 
-	// Get OpenAI API key from environment variable
-	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
-	openaiClient := services.NewOpenAIClient(openaiAPIKey)
+	openaiClient := services.NewOpenAIClient(configRepo)
 
 	connectionService := services.NewConnectionService(connectionRepo, metadataRepo, serviceFactory, metadataFactory, openaiClient)
+	configService := services.NewConfigService(configRepo)
 
 	connectHnd := handlers.NewConnectHandler(connectionService)
 	testConnHnd := handlers.NewTestConnectionHandler(connectionService)
@@ -50,6 +49,7 @@ func main() {
 	connectByIDHnd := handlers.NewConnectByIDHandler(connectionService)
 	analyzeMetadataHnd := handlers.NewAnalyzeMetadataHandler(connectionService)
 	genQueryHnd := handlers.NewGenQueryHandler(connectionService)
+	setConfigHnd := handlers.NewSetConfigHandler(configService)
 
 	// Create application with options
 	err = wails.Run(&options.App{
@@ -74,6 +74,7 @@ func main() {
 			connectByIDHnd,
 			analyzeMetadataHnd,
 			genQueryHnd,
+			setConfigHnd,
 		},
 	})
 

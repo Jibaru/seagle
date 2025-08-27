@@ -15,16 +15,16 @@ import (
 
 // OpenAIClient handles communication with OpenAI API
 type OpenAIClient struct {
-	apiKey     string
+	configRepo domain.ConfigRepo
 	baseURL    string
 	httpClient *http.Client
 }
 
 // NewOpenAIClient creates a new OpenAI client
-func NewOpenAIClient(apiKey string) *OpenAIClient {
+func NewOpenAIClient(configRepo domain.ConfigRepo) *OpenAIClient {
 	return &OpenAIClient{
-		apiKey:  apiKey,
-		baseURL: "https://api.openai.com/v1",
+		configRepo: configRepo,
+		baseURL:    "https://api.openai.com/v1",
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -79,9 +79,15 @@ type OpenAIError struct {
 
 // GenerateQuery generates a SQL query based on natural language input and database metadata
 func (c *OpenAIClient) GenerateQuery(userPrompt string, metadata *domain.ConnectionMetadata, connection *domain.Connection) (string, error) {
-	if c.apiKey == "" {
+	cfg, err := c.configRepo.Find()
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve OpenAI API key: %w", err)
+	}
+
+	if cfg == nil || cfg.OpenAIAPIKey() == "" {
 		return "", fmt.Errorf("OpenAI API key not configured")
 	}
+	apiKey := cfg.OpenAIAPIKey()
 
 	// Build the system prompt with database metadata
 	systemPrompt := c.buildSystemPrompt(metadata, connection)
@@ -104,7 +110,7 @@ func (c *OpenAIClient) GenerateQuery(userPrompt string, metadata *domain.Connect
 	}
 
 	// Make the API call
-	response, err := c.makeRequest(request)
+	response, err := c.makeRequest(request, apiKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to call OpenAI API: %w", err)
 	}
@@ -247,7 +253,8 @@ Respond with only the raw SQL query, no formatting.`
 }
 
 // makeRequest makes an HTTP request to OpenAI API
-func (c *OpenAIClient) makeRequest(request OpenAIRequest) (*OpenAIResponse, error) {
+func (c *OpenAIClient) makeRequest(request OpenAIRequest, apiKey string) (*OpenAIResponse, error) {
+
 	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -261,7 +268,7 @@ func (c *OpenAIClient) makeRequest(request OpenAIRequest) (*OpenAIResponse, erro
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
