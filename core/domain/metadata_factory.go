@@ -101,7 +101,7 @@ func (s *MetadataFactory) getTableList(conn *Connection, dbService DatabaseServi
 		query = `
 			SELECT table_name, table_schema
 			FROM information_schema.tables 
-			WHERE table_schema = ? 
+			WHERE table_schema = DATABASE()
 			AND table_type = 'BASE TABLE'
 			ORDER BY table_name
 		`
