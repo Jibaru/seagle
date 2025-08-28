@@ -4,4 +4,16 @@ import { defineConfig } from "vite";
 // https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [react()],
+	optimizeDeps: {
+		include: ["monaco-editor"]
+	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					monaco: ["monaco-editor"]
+				}
+			}
+		}
+	}
 });
